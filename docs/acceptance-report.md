@@ -21,7 +21,8 @@ Evidencia observada el 2026-08-23/24 (America/Argentina/Buenos_Aires).
 
 ## Gameplay y responsive
 
-- Pointer lock fue rechazado por el browser de prueba; el fallback drag-look rotó la cámara.
+- Hover mouse-look verificado en desktop: mover el cursor entre dos puntos del canvas sin botones presionados cambió la orientación de cámara; pointer lock permanece como modo opcional.
+- Pointer lock fue rechazado por el browser de prueba; el fallback hover-look mantuvo el control de cámara disponible.
 - Cámara y DDA quedaron alineados con el crosshair después de corregir el signo del pitch.
 - Break de grass: dirt pasó de 12 a 13 exactamente una vez.
 - Place de dirt: dirt volvió de 13 a 12 exactamente una vez y la selección cambió a Dirt.

@@ -63,7 +63,7 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
   container.innerHTML = `<div class="voxel-ui"><style>${CSS}</style>
     <div class="v-objective"></div><div class="v-crosshair"></div><div class="v-target"></div>
     <div class="v-hotbar"></div><button class="v-pause" aria-label="Pausa">Ⅱ</button>
-    <button class="v-capture">Capturar mouse</button><div class="v-hints"></div><div class="v-overlay"></div></div>`
+    <button class="v-capture">Mouse infinito (opcional)</button><div class="v-hints"></div><div class="v-overlay"></div></div>`
   const root = container.firstElementChild as HTMLElement
   const objective = root.querySelector('.v-objective') as HTMLElement
   const target = root.querySelector('.v-target') as HTMLElement
@@ -106,7 +106,7 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
       })
       hints.textContent = snapshot.device === 'gamepad'
         ? 'Stick izq.: mover · Stick der.: mirar · RT romper · LT colocar · A saltar'
-        : 'WASD: mover · Mouse: mirar · LMB romper · RMB colocar · 1–6 seleccionar'
+        : 'WASD: mover · Mové el cursor para mirar · LMB romper · RMB colocar · 1–6 seleccionar'
       const markup = overlayMarkup(snapshot)
       overlay.innerHTML = markup
       overlay.style.display = markup ? 'flex' : 'none'

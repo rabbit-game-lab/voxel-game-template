@@ -25,11 +25,11 @@ node ~/.codex/skills/create-rabbit-playcanvas-game/scripts/audit-template.mjs .
 
 | Dispositivo | Movimiento y cámara | Acciones |
 |---|---|---|
-| Desktop | WASD, mouse; Shift para sprint | Espacio salta, LMB rompe, RMB coloca, rueda/1–6 selecciona, Esc/P pausa |
+| Desktop | WASD; mover el cursor rota la cámara; Shift para sprint | Espacio salta, LMB rompe, RMB coloca, rueda/1–6 selecciona, Esc/P pausa |
 | Touch | Joystick izquierdo, drag derecho | Botones de salto, romper y colocar; hotbar tocable |
 | Gamepad | Stick izquierdo y derecho | A salta, RT rompe, LT coloca, LB/RB cambia slot, Start pausa |
 
-Si pointer lock no está disponible o es rechazado, un click primario rompe y un drag primario rota la cámara. El click secundario sigue colocando.
+Sin pointer lock, mover el cursor sobre el canvas rota la cámara sin mantener ningún botón. El pointer lock queda disponible como modo opcional para giros ilimitados; LMB rompe y RMB coloca en ambos modos.
 
 ## Arquitectura
 

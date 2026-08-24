@@ -8,7 +8,7 @@ Camera/movement: First-person camera with fixed-step kinematic AABB movement.
 Objective: Mine three exposed crystals and place one in each beacon socket.  
 Failure/restart: Falling below the island defeats the run; restart regenerates seed 1337.  
 Content: Six solid block types, one bounded island, three trees, three crystal quarries, one beacon.  
-Controls: Keyboard/mouse, touch joystick plus drag-look/buttons, standard gamepad.  
+Controls: Keyboard with hover mouse-look and optional pointer lock, touch joystick plus drag-look/buttons, standard gamepad.
 Assets and licenses: Quaternius `Blocks_PixelArt.png`, CC0 1.0; procedural audio and geometry.  
 Config sections: Session, player, camera, controls, world, interaction, HUD, visuals, audio, performance.  
 System order: Input → fixed movement/collision → raycast/actions → edits → mesh queue → render/HUD/audio.  

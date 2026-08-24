@@ -15,7 +15,7 @@
 - `fov`, `maxPitch` y `padLookSpeed` usan grados.
 - Sensibilidades de mouse/touch son grados por pixel.
 - `gamepadDeadZone` pertenece a `[0, 1)`.
-- `fallbackDragThreshold` separa click de drag cuando no hay pointer lock.
+- `fallbackDragThreshold` evita interpretar como rotura un clic que se desplazó demasiado; sin pointer lock, mover el cursor sobre el canvas rota la cámara sin mantener un botón.
 
 ## Mundo
 

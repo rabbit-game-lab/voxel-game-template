@@ -63,6 +63,7 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
   let previousPause = false
   let previousSlot = 0
   let fallback: { id: number; x: number; y: number; moved: number } | null = null
+  let hoverMouse: { x: number; y: number } | null = null
   let touchLook: { id: number; x: number; y: number } | null = null
 
   const mappedCodes = new Map([
@@ -84,6 +85,7 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
   const onContextMenu = (event: Event): void => event.preventDefault()
   const onMouseMove = (event: MouseEvent): void => {
     if (paused || !pointerLock.locked()) return
+    hoverMouse = null
     device = 'keyboard'
     lookX += event.movementX * config.camera.mouseSensitivity
     lookY += event.movementY * config.camera.mouseSensitivity
@@ -110,6 +112,7 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
     } else if (event.button === 2) placePulse = true
   }
   const onPointerMove = (event: PointerEvent): void => {
+    if (paused) return
     if (touchLook?.id === event.pointerId) {
       lookX += (event.clientX - touchLook.x) * config.camera.touchSensitivity
       lookY += (event.clientY - touchLook.y) * config.camera.touchSensitivity
@@ -117,16 +120,21 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
       touchLook.y = event.clientY
       return
     }
-    if (fallback?.id !== event.pointerId) return
-    const dx = event.clientX - fallback.x
-    const dy = event.clientY - fallback.y
-    fallback.moved += Math.hypot(dx, dy)
-    if (fallback.moved >= config.controls.fallbackDragThreshold) {
-      lookX += dx * config.camera.mouseSensitivity
-      lookY += dy * config.camera.mouseSensitivity
+    if (event.pointerType !== 'touch' && !pointerLock.locked()) {
+      if (hoverMouse) {
+        lookX += (event.clientX - hoverMouse.x) * config.camera.mouseSensitivity
+        lookY += (event.clientY - hoverMouse.y) * config.camera.mouseSensitivity
+        device = 'keyboard'
+      }
+      hoverMouse = { x: event.clientX, y: event.clientY }
     }
-    fallback.x = event.clientX
-    fallback.y = event.clientY
+    if (fallback?.id === event.pointerId) {
+      const dx = event.clientX - fallback.x
+      const dy = event.clientY - fallback.y
+      fallback.moved += Math.hypot(dx, dy)
+      fallback.x = event.clientX
+      fallback.y = event.clientY
+    }
   }
   const onPointerUp = (event: PointerEvent): void => {
     if (touchLook?.id === event.pointerId) touchLook = null
@@ -134,16 +142,29 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
       if (fallback.moved < config.controls.fallbackDragThreshold) breakPulse = true
       fallback = null
     }
+    if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId)
     if (pointerLock.locked() && event.pointerType !== 'touch') {
       if (event.button === 0) keyboard.release('break')
       if (event.button === 2) keyboard.release('place')
     }
   }
+  const onPointerEnter = (event: PointerEvent): void => {
+    if (event.pointerType !== 'touch' && !pointerLock.locked()) {
+      hoverMouse = { x: event.clientX, y: event.clientY }
+    }
+  }
+  const onPointerLeave = (): void => { hoverMouse = null }
+  const onPointerCancel = (event: PointerEvent): void => {
+    if (touchLook?.id === event.pointerId) touchLook = null
+    if (fallback?.id === event.pointerId) fallback = null
+    hoverMouse = null
+    if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId)
+  }
   const clear = (): void => {
     keyboard.release('break')
     keyboard.release('place')
     lookX = 0; lookY = 0; wheelDelta = 0; selectedSlot = null
-    breakPulse = false; placePulse = false; fallback = null; touchLook = null
+    breakPulse = false; placePulse = false; fallback = null; hoverMouse = null; touchLook = null
   }
   const onBlur = (): void => clear()
 
@@ -155,7 +176,9 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
   canvas.addEventListener('pointerdown', onPointerDown)
   canvas.addEventListener('pointermove', onPointerMove)
   canvas.addEventListener('pointerup', onPointerUp)
-  canvas.addEventListener('pointercancel', onPointerUp)
+  canvas.addEventListener('pointerenter', onPointerEnter)
+  canvas.addEventListener('pointerleave', onPointerLeave)
+  canvas.addEventListener('pointercancel', onPointerCancel)
 
   function rawPadLook(dt: number): void {
     if (!gamepad.connected() || paused) return
@@ -210,8 +233,8 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
       keyboard.setPaused(value); touch.setPaused(value)
       if (value) clear()
     },
-    requestFocus: () => pointerLock.request(),
-    releaseFocus: () => pointerLock.release(),
+    requestFocus: () => { hoverMouse = null; return pointerLock.request() },
+    releaseFocus: () => { hoverMouse = null; pointerLock.release() },
     isFocused: () => pointerLock.locked(),
     clear,
     destroy() {
@@ -224,7 +247,9 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
       canvas.removeEventListener('pointerdown', onPointerDown)
       canvas.removeEventListener('pointermove', onPointerMove)
       canvas.removeEventListener('pointerup', onPointerUp)
-      canvas.removeEventListener('pointercancel', onPointerUp)
+      canvas.removeEventListener('pointerenter', onPointerEnter)
+      canvas.removeEventListener('pointerleave', onPointerLeave)
+      canvas.removeEventListener('pointercancel', onPointerCancel)
     },
   }
 }
