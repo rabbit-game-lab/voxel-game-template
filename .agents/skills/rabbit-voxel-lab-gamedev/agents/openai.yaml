@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rabbit Voxel Lab Gamedev"
+  short_description: "Safely extend Rabbit Voxel Lab gameplay"
+  default_prompt: "Use $rabbit-voxel-lab-gamedev to add or tune a voxel gameplay feature safely."

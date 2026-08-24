@@ -1,0 +1,9 @@
+{
+  "contract": 1,
+  "stack": "playcanvas-3d",
+  "embed": {
+    "audio": true,
+    "pointerLock": true,
+    "storage": false
+  }
+}

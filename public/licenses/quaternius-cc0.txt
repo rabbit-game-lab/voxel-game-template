@@ -1,0 +1,9 @@
+Quaternius — Cube World Kit
+Source: https://quaternius.com/packs/cubeworldkit.html
+Used file: Blocks_PixelArt.png
+
+The author releases this pack under CC0 1.0 Universal.
+License deed: https://creativecommons.org/publicdomain/zero/1.0/
+
+The distributed copy is public/assets/textures/blocks-pixel-art.png.
+No model files from the pack are distributed in v1.

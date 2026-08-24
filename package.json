@@ -1,0 +1,23 @@
+{
+  "name": "rabbit-voxel-lab",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Rabbit Voxel Lab — editable first-person voxel template for PlayCanvas",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc && vite build",
+    "check": "node scripts/check.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "playcanvas": "^2.20.6"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^8.0.3"
+  }
+}

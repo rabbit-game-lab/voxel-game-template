@@ -1,0 +1,70 @@
+import type { BlockKey, HotbarBlockKey } from '../data/blocks'
+import type { ChunkCoord, VoxelCoord } from '../voxel/coords'
+import type { RayHit } from '../voxel/raycast'
+
+export type GamePhase = 'focus' | 'playing' | 'victory' | 'defeat'
+export type InputDevice = 'keyboard' | 'touch' | 'gamepad'
+export type SoundType = 'jump' | 'break' | 'place' | 'crystal' | 'invalid' | 'victory' | 'defeat'
+
+export interface InputSnapshot {
+  moveX: number
+  moveZ: number
+  lookX: number
+  lookY: number
+  sprint: boolean
+  jumpPressed: boolean
+  breakHeld: boolean
+  placePressed: boolean
+  slotDelta: number
+  selectSlot: number | null
+  restartPressed: boolean
+  pausePressed: boolean
+  device: InputDevice
+}
+
+export interface SimInput {
+  moveX: number
+  moveZ: number
+  sprint: boolean
+  jumpPressed: boolean
+  breakHeld: boolean
+  placePressed: boolean
+}
+
+export interface PlayerState {
+  position: VoxelCoord
+  velocity: VoxelCoord
+  yaw: number
+  pitch: number
+  grounded: boolean
+  coyoteRemaining: number
+}
+
+export interface HudSlot {
+  key: HotbarBlockKey
+  label: string
+  count: number
+  selected: boolean
+  locked: boolean
+}
+
+export interface HudSnapshot {
+  phase: GamePhase
+  paused: boolean
+  placedCrystals: number
+  requiredCrystals: number
+  slots: readonly HudSlot[]
+  device: InputDevice
+  hasTarget: boolean
+  targetLabel: string
+}
+
+export type GameEvent =
+  | { type: 'sound'; sound: SoundType }
+  | { type: 'edit'; dirtyChunks: readonly ChunkCoord[]; voxel: VoxelCoord; block: BlockKey }
+  | { type: 'phase'; phase: GamePhase }
+
+export interface TargetSnapshot {
+  hit: RayHit | null
+  label: string
+}

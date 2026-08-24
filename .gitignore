@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.claude/worktrees/
+work/
+outputs/

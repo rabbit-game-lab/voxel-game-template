@@ -1,0 +1,10 @@
+# Normalize line endings: the Contract Gate hashes src/rabbit/sdk.ts, so the
+# committed bytes must be identical across every template repo and platform.
+* text=auto
+*.ts text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.svg text eol=lf
