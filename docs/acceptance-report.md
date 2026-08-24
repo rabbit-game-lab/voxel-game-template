@@ -13,6 +13,8 @@ Evidencia observada el 2026-08-23/24 (America/Argentina/Buenos_Aires).
 
 La ampliación de ambiente del 2026-08-24 volvió a ejecutar `check`, `build` y la auditoría: 24 checks de contrato, 0 warnings. La build final conserva sólo el warning informativo de tamaño del bundle PlayCanvas.
 
+La ampliación de cámaras volvió a ejecutar los mismos gates y la validación de la skill local: todos aprobaron. El preview de producción en `127.0.0.1:4174` inició con consola limpia.
+
 ## Rabbit y lifecycle
 
 - Iframe sandbox sin `allow-same-origin`: `rabbit:ready=1`, `rabbit:error=0`.
@@ -59,6 +61,22 @@ La ampliación de ambiente del 2026-08-24 volvió a ejecutar `check`, `build` y 
 - Revisión responsive realizada a 1280×720 y 691×807: botón de modo y Pausa no se superponen. La consola permaneció sin errores ni warnings.
 - Configuración entregada: `showToggleButton: false`; el selector queda oculto por defecto mientras los presets y el controlador día/noche permanecen disponibles para AI.
 
+## Cámaras y personaje visible
+
+- FPS se conserva como modo inicial y mantiene el mismo eye height, hover-look, pointer lock opcional, crosshair y DDA. El avatar y su sombra permanecen deshabilitados en esta vista.
+- El botón `3P/1P` alternó a una tercera persona centrada sin liberar foco; `V` fue verificado con un keypress sostenido hasta cruzar un frame de input.
+- La vista de tercera persona mostró el explorador procedural completo, apoyado en terreno, con sombra y 10 draw calls máximos (9 partes + sombra). Movimiento sigue siendo el mismo AABB y queda relativo al yaw de cámara.
+- El backend `Character_Male_2` cargó desde el GLB distribuido, se mostró correctamente riggeado y registró los seis clips obligatorios: `Idle`, `Walk`, `Run`, `Jump`, `Jump_Idle` y `Jump_Land`. La configuración entregada vuelve a `renderer: 'procedural'`.
+- Un path GLB inexistente produjo overlay visible y no llegó a gameplay. Una configuración con FOV inválido dejó únicamente el overlay de error, sin controles interactivos residuales.
+- Configuraciones temporales verificadas y luego revertidas:
+  - `initialMode: 'third-person'` + `showButton: false`: inició con avatar visible y cero botones de cámara.
+  - `switching.enabled: false`: ocultó el botón e ignoró `V`.
+  - `showToggleButton: true`: los controles día/noche, cámara y Pausa no se superpusieron en portrait.
+- Durante Pausa, `V` no cambió la vista; al continuar permaneció el modo previo.
+- Cincuenta clicks consecutivos del selector terminaron en FPS con exactamente 1 botón de cámara, 1 canvas y 6 slots.
+- Revisión visual realizada en 1280×720, 691×807 y 390×844. En portrait, objetivo, cámara y Pausa permanecieron legibles y sin solaparse.
+- El rayo de interacción en tercera persona se deriva del centro real de cámara y sólo conserva un target si otro DDA desde los ojos golpea primero el mismo voxel y está dentro del alcance.
+
 ## Perfil observado
 
 Muestra de tres segundos en el browser de prueba a viewport 1920×1080:
@@ -78,11 +96,19 @@ Perfil de la ampliación ambiental en el browser instrumentado:
 - El browser instrumentado limitó tanto el preset completo como el mínimo a 30,0 FPS / ~34,3 ms. Como ambos perfiles dieron el mismo límite, esta corrida no permite certificar 60 FPS desktop ni atribuir la limitación al ambiente. Se conserva como evidencia el benchmark desktop previo de 120 FPS del template base.
 - La API disponible no expuso una medición fiable de memoria GPU; no se inventa una cifra.
 
+Perfil de producción observado con tercera persona procedural:
+
+- 18 chunks, 21 draw calls de terreno, 7 de ambiente y 10 del avatar/sombra.
+- 14.570 triángulos de terreno y remesh máximo de boot de 3,9 ms.
+- El browser instrumentado registró 32,6 FPS promedio y 34,3 ms de peor frame; mantiene el límite observado de este browser y no certifica hardware móvil.
+
 ## Rutas no probadas físicamente
 
 - Pointer lock concedido por un navegador externo.
 - Multitouch real simultáneo (joystick + look + acción) y `pointercancel` de hardware.
 - Gamepad físico, desconexión y reconexión.
+- Botón `Y` y animaciones walk/run/jump/land con gamepad físico.
+- Colisión del boom contra todas las geometrías límite mediante un recorrido humano exhaustivo; la implementación usa cinco DDA voxel y fue inspeccionada visualmente cerca del spawn/faro.
 - Rendimiento en un teléfono móvil medio.
 - Rendimiento de la ampliación ambiental en desktop sin el cap de 30 FPS del browser instrumentado.
 - Recorrido humano completo de los tres cristales hasta victoria, caída al vacío y edición manual de un borde de chunk.

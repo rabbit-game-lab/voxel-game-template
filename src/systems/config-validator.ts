@@ -17,7 +17,7 @@ function inLakeFootprint(point: readonly [number, number, number], lake: LakeCon
   return ((point[0] - lake.center[0]) / rx) ** 2 + ((point[2] - lake.center[2]) / rz) ** 2 <= 1
 }
 
-export function validateConfig(config: GameConfig): void {
+export function validateConfig(config: GameConfig, modelKeys: readonly string[] = []): void {
   const errors: string[] = []
   const positive = (label: string, value: number): void => {
     if (!finite(value) || value <= 0) errors.push(`${label} must be finite and > 0`)
@@ -27,8 +27,9 @@ export function validateConfig(config: GameConfig): void {
   positive('player.moveSpeed', config.player.moveSpeed)
   positive('player.acceleration', config.player.acceleration)
   positive('player.jumpSpeed', config.player.jumpSpeed)
-  positive('camera.fov', config.camera.fov)
-  positive('camera.farClip', config.camera.farClip)
+  positive('camera.firstPerson.fov', config.camera.modes.firstPerson.fov)
+  positive('camera.thirdPerson.fov', config.camera.modes.thirdPerson.fov)
+  positive('camera.clipping.far', config.camera.clipping.far)
   positive('interaction.reach', config.interaction.reach)
   positive('interaction.breakInterval', config.interaction.breakInterval)
   positive('interaction.placeCooldown', config.interaction.placeCooldown)
@@ -38,10 +39,40 @@ export function validateConfig(config: GameConfig): void {
     errors.push('player.eyeHeight must be inside player.bodyHeight')
   }
   if (config.player.gravity >= 0) errors.push('player.gravity must be negative')
-  if (config.camera.nearClip <= 0 || config.camera.nearClip >= config.camera.farClip) {
-    errors.push('camera.nearClip must be > 0 and below farClip')
+  if (config.camera.clipping.near <= 0 || config.camera.clipping.near >= config.camera.clipping.far) {
+    errors.push('camera.clipping.near must be > 0 and below far')
   }
-  if (config.camera.fov < 35 || config.camera.fov > 110) errors.push('camera.fov must be 35–110 degrees')
+  for (const [mode, spec] of Object.entries(config.camera.modes)) {
+    if (spec.fov < 35 || spec.fov > 110) errors.push(`camera.modes.${mode}.fov must be 35–110 degrees`)
+    if (!spec.pitchRange.every(finite) || spec.pitchRange[0] < -89 || spec.pitchRange[1] > 89 ||
+        spec.pitchRange[0] >= spec.pitchRange[1]) {
+      errors.push(`camera.modes.${mode}.pitchRange must be increasing inside [-89, 89]`)
+    }
+  }
+  if (config.camera.initialMode !== 'first-person' && config.camera.initialMode !== 'third-person') {
+    errors.push('camera.initialMode must be first-person or third-person')
+  }
+  if (typeof config.camera.switching.enabled !== 'boolean' || typeof config.camera.switching.showButton !== 'boolean') {
+    errors.push('camera.switching flags must be boolean')
+  }
+  positive('camera.look.mouseSensitivity', config.camera.look.mouseSensitivity)
+  positive('camera.look.touchSensitivity', config.camera.look.touchSensitivity)
+  positive('camera.look.padLookSpeed', config.camera.look.padLookSpeed)
+  const thirdPerson = config.camera.modes.thirdPerson
+  for (const [label, value] of Object.entries({
+    distance: thirdPerson.distance, height: thirdPerson.height, aimDistance: thirdPerson.aimDistance,
+    minDistance: thirdPerson.minDistance, collisionRadius: thirdPerson.collisionRadius,
+    collisionPadding: thirdPerson.collisionPadding, returnSpeed: thirdPerson.returnSpeed,
+  })) positive(`camera.modes.thirdPerson.${label}`, value)
+  if (thirdPerson.minDistance > thirdPerson.distance) {
+    errors.push('camera.modes.thirdPerson.minDistance must not exceed distance')
+  }
+  if (thirdPerson.aimDistance < config.interaction.reach) {
+    errors.push('camera.modes.thirdPerson.aimDistance must cover interaction.reach')
+  }
+  if (thirdPerson.collisionRadius > 1 || thirdPerson.collisionPadding >= thirdPerson.distance) {
+    errors.push('camera third-person collision values are outside supported bounds')
+  }
   if (config.controls.gamepadDeadZone < 0 || config.controls.gamepadDeadZone >= 1) {
     errors.push('controls.gamepadDeadZone must be in [0, 1)')
   }
@@ -56,9 +87,46 @@ export function validateConfig(config: GameConfig): void {
     particles: environment.decorations.particles.color,
     selection: config.visual.selection,
     socket: config.visual.socket,
+    avatarSkin: config.player.avatar.procedural.colors.skin,
+    avatarHair: config.player.avatar.procedural.colors.hair,
+    avatarShirt: config.player.avatar.procedural.colors.shirt,
+    avatarPants: config.player.avatar.procedural.colors.pants,
+    avatarBoots: config.player.avatar.procedural.colors.boots,
   })) {
     if (!validColor(value)) errors.push(`${label} must be a six-digit hex color`)
   }
+  const avatar = config.player.avatar
+  if (avatar.renderer !== 'procedural' && avatar.renderer !== 'gltf') {
+    errors.push('player.avatar.renderer must be procedural or gltf')
+  }
+  positive('player.avatar.turnSpeed', avatar.turnSpeed)
+  if (!finite(avatar.actionFacingTime) || avatar.actionFacingTime < 0) {
+    errors.push('player.avatar.actionFacingTime must be finite and non-negative')
+  }
+  positive('player.avatar.procedural.height', avatar.procedural.height)
+  positive('player.avatar.procedural.bodyWidth', avatar.procedural.bodyWidth)
+  positive('player.avatar.procedural.headScale', avatar.procedural.headScale)
+  if (avatar.procedural.height > config.player.bodyHeight) {
+    errors.push('player.avatar.procedural.height must fit inside player.bodyHeight')
+  }
+  for (const [label, value] of Object.entries(avatar.procedural.animation)) {
+    if (!finite(value) || value < 0) errors.push(`player.avatar.procedural.animation.${label} must be non-negative`)
+  }
+  if (!avatar.gltf.assetKey.trim()) errors.push('player.avatar.gltf.assetKey must not be empty')
+  positive('player.avatar.gltf.scale', avatar.gltf.scale)
+  if (!finite(avatar.gltf.yOffset) || !finite(avatar.gltf.rotationY) ||
+      !finite(avatar.gltf.blendTime) || avatar.gltf.blendTime < 0) {
+    errors.push('player.avatar.gltf transforms and blendTime must be finite')
+  }
+  if (avatar.renderer === 'gltf' && !modelKeys.includes(avatar.gltf.assetKey)) {
+    errors.push(`player.avatar.gltf.assetKey ${avatar.gltf.assetKey} is not registered in the asset manifest`)
+  }
+  if (typeof avatar.shadow.enabled !== 'boolean' || !finite(avatar.shadow.opacity) ||
+      avatar.shadow.opacity < 0 || avatar.shadow.opacity >= 1) {
+    errors.push('player.avatar.shadow enabled/opacity values are invalid')
+  }
+  positive('player.avatar.shadow.radius', avatar.shadow.radius)
+  positive('player.avatar.shadow.maxDistance', avatar.shadow.maxDistance)
   if (environment.sky.initialMode !== 'day' && environment.sky.initialMode !== 'night') {
     errors.push('environment.sky.initialMode must be day or night')
   }
@@ -105,7 +173,7 @@ export function validateConfig(config: GameConfig): void {
   for (const [index, layer] of environment.clouds.layers.entries()) {
     cloudCount += layer.count
     if (!Number.isInteger(layer.count) || layer.count < 0) errors.push(`cloud layer ${index} count must be a non-negative integer`)
-    if (!finite(layer.altitude) || layer.altitude <= 0 || layer.altitude >= config.camera.farClip) {
+    if (!finite(layer.altitude) || layer.altitude <= 0 || layer.altitude >= config.camera.clipping.far) {
       errors.push(`cloud layer ${index} altitude must be positive and below camera.farClip`)
     }
     if (!finite(layer.speed) || layer.speed < 0) errors.push(`cloud layer ${index} speed must be non-negative`)

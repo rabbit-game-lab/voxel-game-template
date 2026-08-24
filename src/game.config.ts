@@ -1,4 +1,5 @@
 import type { BlockKey } from './data/blocks'
+import type { AvatarConfig, CameraConfig } from './camera/config'
 import type { EnvironmentConfig } from './environment/config'
 
 type Vec2 = readonly [number, number]
@@ -11,11 +12,9 @@ export interface GameConfig {
     moveSpeed: number; sprintMultiplier: number; acceleration: number
     airControl: number; friction: number; jumpSpeed: number
     gravity: number; maxFallSpeed: number; coyoteTime: number
+    avatar: AvatarConfig
   }
-  camera: {
-    fov: number; nearClip: number; farClip: number; maxPitch: number
-    mouseSensitivity: number; touchSensitivity: number; padLookSpeed: number
-  }
+  camera: CameraConfig
   controls: { gamepadDeadZone: number; fallbackDragThreshold: number; touchSize: number }
   world: {
     seed: number; min: Vec3; size: Vec3; spawn: Vec3
@@ -45,10 +44,39 @@ export const CONFIG = {
     moveSpeed: 5.4, sprintMultiplier: 1.45, acceleration: 34,
     airControl: 0.35, friction: 24, jumpSpeed: 8.4,
     gravity: -25, maxFallSpeed: 36, coyoteTime: 0.1,
+    avatar: {
+      renderer: 'procedural', turnSpeed: 720, actionFacingTime: 0.22,
+      procedural: {
+        height: 1.72, bodyWidth: 0.5, headScale: 1,
+        colors: {
+          skin: '#d6a06c', hair: '#5a3825', shirt: '#3f8f86',
+          pants: '#34495e', boots: '#4a3428',
+        },
+        animation: {
+          idleBob: 0.025, walkFrequency: 7, runFrequency: 10,
+          walkSwing: 28, runSwing: 42,
+        },
+      },
+      gltf: {
+        assetKey: 'quaterniusHero', scale: 0.68, yOffset: 0,
+        rotationY: 180, blendTime: 0.12,
+      },
+      shadow: { enabled: true, opacity: 0.24, radius: 0.42, maxDistance: 3 },
+    },
   },
   camera: {
-    fov: 72, nearClip: 0.05, farClip: 90, maxPitch: 88,
-    mouseSensitivity: 0.09, touchSensitivity: 0.18, padLookSpeed: 145,
+    initialMode: 'first-person',
+    switching: { enabled: true, showButton: true },
+    clipping: { near: 0.05, far: 90 },
+    look: { mouseSensitivity: 0.09, touchSensitivity: 0.18, padLookSpeed: 145 },
+    modes: {
+      firstPerson: { fov: 72, pitchRange: [-88, 88] },
+      thirdPerson: {
+        fov: 68, pitchRange: [-62, 54], distance: 4.8, height: 2.55,
+        aimDistance: 12, minDistance: 0.75, collisionRadius: 0.22,
+        collisionPadding: 0.18, returnSpeed: 10,
+      },
+    },
   },
   controls: { gamepadDeadZone: 0.17, fallbackDragThreshold: 7, touchSize: 126 },
   world: {

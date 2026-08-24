@@ -1,4 +1,5 @@
 import type { BlockKey, HotbarBlockKey } from '../data/blocks'
+import type { CameraMode } from '../camera/config'
 import type { TimeOfDay } from '../environment/config'
 import type { ChunkCoord, VoxelCoord } from '../voxel/coords'
 import type { RayHit } from '../voxel/raycast'
@@ -20,6 +21,7 @@ export interface InputSnapshot {
   selectSlot: number | null
   restartPressed: boolean
   pausePressed: boolean
+  cameraPressed: boolean
   device: InputDevice
 }
 
@@ -28,8 +30,6 @@ export interface SimInput {
   moveZ: number
   sprint: boolean
   jumpPressed: boolean
-  breakHeld: boolean
-  placePressed: boolean
 }
 
 export interface PlayerState {
@@ -53,6 +53,7 @@ export interface HudSlot {
 export interface HudSnapshot {
   phase: GamePhase
   paused: boolean
+  cameraMode: CameraMode
   timeOfDay: TimeOfDay
   placedCrystals: number
   requiredCrystals: number
@@ -64,8 +65,26 @@ export interface HudSnapshot {
 
 export type GameEvent =
   | { type: 'sound'; sound: SoundType }
-  | { type: 'edit'; dirtyChunks: readonly ChunkCoord[]; voxel: VoxelCoord; block: BlockKey }
+  | { type: 'edit'; action: 'break' | 'place'; dirtyChunks: readonly ChunkCoord[]; voxel: VoxelCoord; block: BlockKey }
   | { type: 'phase'; phase: GamePhase }
+
+export interface AimRay {
+  origin: VoxelCoord
+  direction: VoxelCoord
+  maxDistance: number
+}
+
+export interface CameraPose extends AimRay {
+  position: VoxelCoord
+  mode: CameraMode
+}
+
+export interface AvatarRenderState {
+  moving: boolean
+  running: boolean
+  grounded: boolean
+  rising: boolean
+}
 
 export interface TargetSnapshot {
   hit: RayHit | null

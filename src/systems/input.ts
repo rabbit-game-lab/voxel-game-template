@@ -6,7 +6,7 @@ import { createTouch } from '../rabbit/touch'
 import type { InputDevice, InputSnapshot } from '../sim/types'
 
 type Action = 'forward' | 'back' | 'left' | 'right' | 'jump' | 'sprint' |
-  'break' | 'place' | 'previous' | 'next' | 'restart' | 'pause'
+  'break' | 'place' | 'previous' | 'next' | 'restart' | 'pause' | 'camera'
 
 export interface InputHandle {
   snapshot(dt: number): InputSnapshot
@@ -22,8 +22,11 @@ const KEY_MAP: Record<Action, readonly string[]> = {
   forward: ['KeyW', 'ArrowUp'], back: ['KeyS', 'ArrowDown'],
   left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
   jump: ['Space'], sprint: ['ShiftLeft', 'ShiftRight'],
-  break: [], place: [], previous: [], next: [], restart: ['KeyR'], pause: [],
+  break: [], place: [], previous: [], next: [], restart: ['KeyR'], pause: [], camera: ['KeyV'],
 }
+const GAMEPAD_BUTTON_ACTIONS: readonly Action[] = [
+  'jump', 'camera', 'previous', 'next', 'place', 'break', 'pause',
+]
 
 export function createInput(canvas: HTMLCanvasElement, config: GameConfig): InputHandle {
   const keyboard = createKeyboard<Action>(KEY_MAP)
@@ -41,7 +44,7 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
     target: keyboard,
     deadZone: config.controls.gamepadDeadZone,
     map: {
-      buttons: { 0: 'jump', 4: 'previous', 5: 'next', 6: 'place', 7: 'break', 9: 'pause' },
+      buttons: { 0: 'jump', 3: 'camera', 4: 'previous', 5: 'next', 6: 'place', 7: 'break', 9: 'pause' },
       axes: {
         0: { negative: 'left', positive: 'right' },
         1: { negative: 'forward', positive: 'back' },
@@ -61,6 +64,7 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
   let previousPlace = false
   let previousRestart = false
   let previousPause = false
+  let previousCamera = false
   let previousSlot = 0
   let fallback: { id: number; x: number; y: number; moved: number } | null = null
   let hoverMouse: { x: number; y: number } | null = null
@@ -87,8 +91,8 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
     if (paused || !pointerLock.locked()) return
     hoverMouse = null
     device = 'keyboard'
-    lookX += event.movementX * config.camera.mouseSensitivity
-    lookY += event.movementY * config.camera.mouseSensitivity
+    lookX += event.movementX * config.camera.look.mouseSensitivity
+    lookY += event.movementY * config.camera.look.mouseSensitivity
   }
   const onPointerDown = (event: PointerEvent): void => {
     if (paused) return
@@ -114,16 +118,16 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
   const onPointerMove = (event: PointerEvent): void => {
     if (paused) return
     if (touchLook?.id === event.pointerId) {
-      lookX += (event.clientX - touchLook.x) * config.camera.touchSensitivity
-      lookY += (event.clientY - touchLook.y) * config.camera.touchSensitivity
+      lookX += (event.clientX - touchLook.x) * config.camera.look.touchSensitivity
+      lookY += (event.clientY - touchLook.y) * config.camera.look.touchSensitivity
       touchLook.x = event.clientX
       touchLook.y = event.clientY
       return
     }
     if (event.pointerType !== 'touch' && !pointerLock.locked()) {
       if (hoverMouse) {
-        lookX += (event.clientX - hoverMouse.x) * config.camera.mouseSensitivity
-        lookY += (event.clientY - hoverMouse.y) * config.camera.mouseSensitivity
+        lookX += (event.clientX - hoverMouse.x) * config.camera.look.mouseSensitivity
+        lookY += (event.clientY - hoverMouse.y) * config.camera.look.mouseSensitivity
         device = 'keyboard'
       }
       hoverMouse = { x: event.clientX, y: event.clientY }
@@ -189,9 +193,14 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
     const y = Math.abs(pad.axes[3] ?? 0) > deadZone ? (pad.axes[3] ?? 0) : 0
     if (x !== 0 || y !== 0) {
       device = 'gamepad'
-      lookX += x * config.camera.padLookSpeed * dt
-      lookY += y * config.camera.padLookSpeed * dt
+      lookX += x * config.camera.look.padLookSpeed * dt
+      lookY += y * config.camera.look.padLookSpeed * dt
     }
+  }
+
+  function gamepadButtonActive(): boolean {
+    for (const action of GAMEPAD_BUTTON_ACTIONS) if (gamepad.pressed(action)) return true
+    return false
   }
 
   return {
@@ -210,7 +219,9 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
       const place = keyboard.pressed('place') || placePulse
       const restart = keyboard.pressed('restart')
       const pause = keyboard.pressed('pause') || gamepad.pressed('pause')
+      const camera = keyboard.pressed('camera')
       const slot = (keyboard.pressed('next') ? 1 : 0) - (keyboard.pressed('previous') ? 1 : 0)
+      if (gamepad.connected() && gamepadButtonActive()) device = 'gamepad'
       const result: InputSnapshot = {
         moveX, moveZ, lookX, lookY, sprint: keyboard.pressed('sprint'),
         jumpPressed: jump && !previousJump,
@@ -220,10 +231,11 @@ export function createInput(canvas: HTMLCanvasElement, config: GameConfig): Inpu
         selectSlot: selectedSlot,
         restartPressed: restart && !previousRestart,
         pausePressed: pause && !previousPause,
+        cameraPressed: camera && !previousCamera,
         device,
       }
       previousJump = jump; previousPlace = place; previousRestart = restart
-      previousPause = pause; previousSlot = slot
+      previousPause = pause; previousCamera = camera; previousSlot = slot
       lookX = 0; lookY = 0; wheelDelta = 0; selectedSlot = null
       breakPulse = false; placePulse = false
       return result

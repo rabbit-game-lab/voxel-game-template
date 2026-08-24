@@ -12,10 +12,23 @@
 
 ## Cámara y controles
 
-- `fov`, `maxPitch` y `padLookSpeed` usan grados.
-- Sensibilidades de mouse/touch son grados por pixel.
+- `camera.initialMode` acepta `first-person` o `third-person`. Es la receta mínima para cambiar la vista inicial y también la vista restaurada por restart.
+- `camera.switching.enabled` habilita el cambio durante gameplay; `showButton` sólo muestra u oculta el control HUD. El sistema sigue disponible mediante `GameHandle.setCameraMode()` aunque la UI esté oculta.
+- Cada estrategia posee su propio `fov` y `pitchRange`, expresados en grados. `clipping.near/far` se comparte.
+- En tercera persona, `distance` y `height` definen el boom; `collisionRadius`, `collisionPadding`, `minDistance` y `returnSpeed` controlan su colisión y recuperación. El centro de cámara produce el rayo real del crosshair.
+- Sensibilidades de mouse/touch son grados por pixel; `padLookSpeed` usa grados por segundo.
 - `gamepadDeadZone` pertenece a `[0, 1)`.
 - `fallbackDragThreshold` evita interpretar como rotura un clic que se desplazó demasiado; sin pointer lock, mover el cursor sobre el canvas rota la cámara sin mantener un botón.
+- `V`, el botón HUD y `Y` de gamepad alternan las vistas cuando switching está habilitado.
+
+## Avatar
+
+- `player.avatar.renderer` acepta `procedural` o `gltf`. No cambia el AABB, la física ni la simulación.
+- `procedural` controla proporciones, colores y amplitud/frecuencia de idle, walk y run; usa materiales y entidades reutilizables.
+- `gltf.assetKey` debe existir en el manifest condicional de `src/data/assets.ts`. El backend incluido carga `quaterniusHero` y exige `Idle`, `Walk`, `Run`, `Jump`, `Jump_Idle` y `Jump_Land`.
+- `scale`, `yOffset` y `rotationY` corrigen la autoría del GLB; `blendTime` controla las transiciones.
+- `turnSpeed` orienta el avatar hacia movimiento o una edición exitosa durante `actionFacingTime`.
+- La sombra es visual y no agrega collider. Avatar y sombra sólo se renderizan en tercera persona.
 
 ## Mundo
 
@@ -49,4 +62,4 @@ Las recetas de edición segura y presets están en [`environment-config.md`](env
 - `fragmentPoolSize` es fijo y no crece durante la sesión.
 - `maxCatchupSteps` limita el catch-up de la simulación fija de 60 Hz.
 
-No son configurables por diseño: tamaño de chunk, paso fijo, layout de arrays, algoritmos de generación/meshing/colisión/DDA, rutas y filtros del atlas, ni lifecycle Rabbit.
+No son configurables por diseño: tamaño de chunk, paso fijo, layout de arrays, algoritmos de generación/meshing/colisión/DDA/cámara, rutas y filtros de assets, ni lifecycle Rabbit.

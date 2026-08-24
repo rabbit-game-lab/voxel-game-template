@@ -1,6 +1,6 @@
 ---
 name: rabbit-voxel-lab-gamedev
-description: Extend, tune, debug, or review the Rabbit Voxel Lab PlayCanvas template. Use for block registry changes, deterministic terrain, lakes or landmarks, chunk meshing, voxel collision and DDA, first-person controls, sky/cloud/water/decor environment work, inventory and beacon rules, HUD/audio/effects, Rabbit lifecycle, performance work, or acceptance testing in this repository.
+description: Extend, tune, debug, or review the Rabbit Voxel Lab PlayCanvas template. Use for block registry changes, deterministic terrain, lakes or landmarks, chunk meshing, voxel collision and DDA, first/third-person cameras, procedural or GLB avatars, controls, sky/cloud/water/decor environment work, inventory and beacon rules, HUD/audio/effects, Rabbit lifecycle, performance work, or acceptance testing in this repository.
 ---
 
 # Rabbit Voxel Lab Gamedev
@@ -20,11 +20,15 @@ Maintain the reusable Rabbit voxel template without breaking deterministic gener
 - Tune numbers, colors, spawn or landmarks in `src/game.config.ts`; extend `src/systems/config-validator.ts` for new invariants.
 - Tune sky, clouds, lakes, shore density, particles or ambience only through `CONFIG.environment`. Keep the public types in `src/environment/config.ts`, deterministic lake membership in `src/environment/lakes.ts`, and PlayCanvas factories in `src/entities/environment.ts`.
 - Handle “make it night/day” by changing `environment.sky.initialMode` or the existing `day/night` presets. Use `showToggleButton` only to expose/hide the temporary ☾/☀ control; preserve the shared runtime controller in scene, environment and world view.
+- Handle “make it first/third person” through `CONFIG.camera`. Keep strategy logic in `src/entities/camera-rig.ts`, the real camera-center ray in `AimRay`, and third-person visibility/reach verification in `src/sim/session.ts`. Do not create separate player movement implementations.
+- Tune the visible character through `CONFIG.player.avatar`. Keep renderer factories in `src/entities/player-avatar.ts`; procedural geometry and imported GLB animation remain render-only mirrors of the same player AABB.
+- For the Quaternius backend, preserve conditional boot registration in `src/data/assets.ts`, exact required clip mappings and provenance in `THIRD_PARTY.md`. A selected missing/invalid model must reject boot visibly.
 - Add a block in `src/data/blocks.ts`. Append a new stable numeric ID; never reorder or reuse an existing ID. Define all face tiles and inventory behavior.
 - Change generation in `src/voxel/generator.ts`. Preserve seed determinism and apply guaranteed landmarks after noise terrain.
 - Change storage or coordinates in `src/voxel/chunk.ts`, `coords.ts`, and `world.ts`. Preserve allocation-free reads and Euclidean negative-coordinate handling.
 - Change geometry in `src/voxel/mesher.ts` and `src/entities/world-view.ts`. Keep one entity per chunk, one opaque and one liquid mesh, shared materials, cross-chunk culling, neighbor invalidation, and the two-remesh-per-frame cap.
 - Change movement in `src/sim/player.ts`; keep it engine-independent and fixed-step. Do not add per-block colliders or a physics dependency.
+- Change camera presentation/collision in `src/entities/camera-rig.ts`; keep five voxel traces, immediate obstacle contraction, smooth recovery and water/decor exclusion.
 - Change interaction in `src/voxel/raycast.ts` and `src/sim/session.ts`; preserve bounds checks, player-overlap rejection, atomic inventory edits, and one-shot victory.
 - Change device controls in `src/systems/input.ts`; expose only normalized `InputSnapshot` to simulation and clear state on blur, cancel, pause, disconnect, and end states.
 - Change DOM only in `src/systems/hud.ts`; keep one HUD tree, touch-safe layout, and change-driven updates.
@@ -38,6 +42,8 @@ Maintain the reusable Rabbit voxel template without breaking deterministic gener
 - Water remains non-solid, non-raycastable, replaceable and absent from the hotbar. Breaking a placed block in a natural lake cell restores water without propagation.
 - Clouds and shore props remain merged by layer/category. Environment features implement `update/reset/setPaused/setTimeOfDay/destroy/stats` and are registered through the internal factory list.
 - Day/night switches reuse both prebuilt domes and celestial bodies, one merged star mesh and shared terrain/cloud materials. Do not rebuild chunks or recreate resources when toggling.
+- Camera switches reuse one camera, one configured avatar and one shadow. FPS hides the avatar completely; third-person movement remains camera-relative and interaction must pass both camera and player-eye DDA checks.
+- Restart restores `camera.initialMode`; `GameHandle.setCameraMode()` remains available when the selector is hidden. Switching during pause or end states remains blocked for player input.
 - Edits dirty the owner chunk plus neighbors touched at chunk boundaries.
 - Pause and end states block simulation, editing, scoring and session audio.
 - Restart regenerates seed `1337` and resets world, sockets, crystals, inventory, player and HUD without duplicating resources or listeners.
@@ -61,6 +67,8 @@ For gameplay or lifecycle changes also verify:
 - touch-sized landscape and portrait layout;
 - deterministic lake/cloud/decoration layout plus individual environment toggles;
 - both day/night presets, initial night boot, hidden toggle config and restart-to-initial-mode;
+- both camera modes, camera collision/recovery, aligned crosshair, initial third-person boot, hidden/disabled selector, V/Y/touch switching and restart-to-initial-mode;
+- both avatar renderers and required GLB clips; FPS must contribute zero visible avatar draw calls;
 - water DDA pass-through, wading, displacement/restoration and a cross-chunk liquid edit;
 - block edits at an ordinary voxel and a chunk boundary;
 - pause, victory, defeat, restart, and repeated restart;

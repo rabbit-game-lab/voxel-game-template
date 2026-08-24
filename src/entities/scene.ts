@@ -1,29 +1,38 @@
 import * as pc from 'playcanvas'
+import type { CameraMode } from '../camera/config'
 import type { TimeOfDay } from '../environment/config'
 import { color } from './helpers'
 import type { GameConfig } from '../game.config'
-import type { PlayerState } from '../sim/types'
+import type { AssetsHandle } from '../rabbit/assets'
+import type { AimRay, PlayerState } from '../sim/types'
+import type { VoxelCoord } from '../voxel/coords'
+import type { VoxelWorld } from '../voxel/world'
+import { createCameraRig } from './camera-rig'
+import { createPlayerAvatar } from './player-avatar'
 
 export interface SceneHandle {
   camera: pc.Entity
+  cameraMode(): CameraMode
+  setCameraMode(mode: CameraMode): void
   setTimeOfDay(mode: TimeOfDay): void
-  updatePlayer(player: PlayerState): void
+  updatePlayer(player: PlayerState, dt: number, animate: boolean): AimRay
+  triggerAvatarAction(target: VoxelCoord): void
+  reset(player: PlayerState): void
+  avatarStats(): { drawCalls: number; renderer: string }
   destroy(): void
 }
 
-export function createScene(app: pc.Application, config: GameConfig): SceneHandle {
+export function createScene(
+  app: pc.Application,
+  world: VoxelWorld,
+  assets: AssetsHandle,
+  config: GameConfig,
+): SceneHandle {
   const root = new pc.Entity('Voxel Scene')
   app.root.addChild(root)
   const initialSky = config.environment.sky.presets[config.environment.sky.initialMode]
-
-  const camera = new pc.Entity('FPS Camera')
-  camera.addComponent('camera', {
-    clearColor: color(initialSky.horizon),
-    fov: config.camera.fov,
-    nearClip: config.camera.nearClip,
-    farClip: config.camera.farClip,
-  })
-  root.addChild(camera)
+  const cameraRig = createCameraRig(root, world, config, color(initialSky.horizon))
+  const avatar = createPlayerAvatar(root, world, assets, config)
 
   const celestialLight = new pc.Entity('Celestial Light')
   celestialLight.addComponent('light', {
@@ -39,7 +48,7 @@ export function createScene(app: pc.Application, config: GameConfig): SceneHandl
     app.scene.fog.color.copy(color(preset.fogColor))
     app.scene.fog.start = preset.fogStart
     app.scene.fog.end = preset.fogEnd
-    camera.camera!.clearColor.copy(color(preset.horizon))
+    cameraRig.entity.camera!.clearColor.copy(color(preset.horizon))
     celestialLight.light!.color.copy(color(preset.lightColor))
     celestialLight.light!.intensity = preset.lightIntensity
     celestialLight.setLocalEulerAngles(...preset.celestialEuler)
@@ -47,17 +56,20 @@ export function createScene(app: pc.Application, config: GameConfig): SceneHandl
   setTimeOfDay(config.environment.sky.initialMode)
 
   return {
-    camera,
+    camera: cameraRig.entity,
+    cameraMode: cameraRig.mode,
+    setCameraMode(mode) { cameraRig.setMode(mode); avatar.setCameraMode(mode) },
     setTimeOfDay,
-    updatePlayer(player) {
-      camera.setPosition(
-        player.position.x,
-        player.position.y + config.player.eyeHeight,
-        player.position.z,
-      )
-      camera.setEulerAngles(player.pitch, player.yaw, 0)
+    updatePlayer(player, dt, animate) {
+      const aim = cameraRig.update(player, dt)
+      avatar.update(player, dt, animate)
+      return aim
     },
+    triggerAvatarAction: (target) => avatar.triggerAction(target),
+    reset(player) { cameraRig.reset(); avatar.setCameraMode(cameraRig.mode()); avatar.reset(player) },
+    avatarStats: avatar.stats,
     destroy() {
+      avatar.destroy(); cameraRig.destroy()
       root.destroy()
       app.scene.fog.type = pc.FOG_NONE
     },

@@ -2,18 +2,20 @@ import {
   BLOCKS, HOTBAR_BLOCKS, blockById, blockId, isBlockKey,
   type BlockKey, type HotbarBlockKey,
 } from '../data/blocks'
+import type { CameraMode, Range } from '../camera/config'
 import type { GameConfig } from '../game.config'
 import { naturalReplacementAt } from '../environment/lakes'
 import type { TimeOfDay } from '../environment/config'
 import type { VoxelCoord } from '../voxel/coords'
+import { sameVoxel } from '../voxel/coords'
 import { generateWorld } from '../voxel/generator'
 import { raycastVoxels } from '../voxel/raycast'
 import { VoxelWorld } from '../voxel/world'
 import {
-  collidesAt, createPlayer, playerIntersectsVoxel, stepPlayer, viewDirection,
+  collidesAt, createPlayer, playerIntersectsVoxel, stepPlayer,
 } from './player'
 import type {
-  GameEvent, GamePhase, HudSnapshot, InputDevice, InputSnapshot,
+  AimRay, GameEvent, GamePhase, HudSnapshot, InputDevice, InputSnapshot,
   PlayerState, SimInput, TargetSnapshot,
 } from './types'
 
@@ -26,11 +28,14 @@ export class GameSession {
   private target: TargetSnapshot = { hit: null, label: '' }
   private breakCooldown = 0
   private placeCooldown = 0
+  private aimRay: AimRay | null = null
+  private cameraMode: CameraMode
   private readonly events: GameEvent[] = []
 
   constructor(private readonly config: GameConfig) {
     this.world = new VoxelWorld(config.world.min, config.world.size)
     this.player = createPlayer(config)
+    this.cameraMode = config.camera.initialMode
     this.restart()
   }
 
@@ -41,11 +46,13 @@ export class GameSession {
     this.selectedSlot = 1
     this.breakCooldown = 0
     this.placeCooldown = 0
+    this.aimRay = null
+    this.cameraMode = this.config.camera.initialMode
     this.events.length = 0
     for (const key of Object.keys(BLOCKS) as BlockKey[]) {
       this.inventory[key] = this.config.world.startingInventory[key] ?? 0
     }
-    this.refreshTarget()
+    this.target = { hit: null, label: '' }
   }
 
   begin(): void {
@@ -54,7 +61,7 @@ export class GameSession {
     this.events.push({ type: 'phase', phase: this.phase })
   }
 
-  applyFrameInput(input: InputSnapshot): void {
+  applyFrameInput(input: InputSnapshot, pitchRange: Range): void {
     if (input.selectSlot !== null && input.selectSlot >= 0 && input.selectSlot < HOTBAR_BLOCKS.length) {
       this.selectedSlot = input.selectSlot
     }
@@ -64,14 +71,13 @@ export class GameSession {
     if (this.phase === 'playing') {
       this.player.yaw = (this.player.yaw - input.lookX) % 360
       this.player.pitch = Math.max(
-        -this.config.camera.maxPitch,
-        Math.min(this.config.camera.maxPitch, this.player.pitch - input.lookY),
+        pitchRange[0],
+        Math.min(pitchRange[1], this.player.pitch - input.lookY),
       )
     }
-    this.refreshTarget()
   }
 
-  step(input: SimInput, dt: number): void {
+  stepMovement(input: SimInput, dt: number): void {
     if (this.phase !== 'playing') return
     this.breakCooldown = Math.max(0, this.breakCooldown - dt)
     this.placeCooldown = Math.max(0, this.placeCooldown - dt)
@@ -82,18 +88,43 @@ export class GameSession {
       this.end('defeat')
       return
     }
-    this.refreshTarget()
-    if (input.breakHeld && this.breakCooldown <= 0) this.breakTarget()
-    if (input.placePressed && this.placeCooldown <= 0) this.placeTarget()
   }
 
-  refreshTarget(): void {
-    const origin = {
+  updateTarget(aimRay: AimRay, cameraMode: CameraMode): void {
+    this.aimRay = aimRay
+    this.cameraMode = cameraMode
+    this.refreshTarget()
+  }
+
+  applyInteraction(breakHeld: boolean, placePressed: boolean): void {
+    if (this.phase !== 'playing') return
+    if (breakHeld && this.breakCooldown <= 0) this.breakTarget()
+    if (placePressed && this.placeCooldown <= 0) this.placeTarget()
+  }
+
+  private refreshTarget(): void {
+    const aim = this.aimRay
+    if (!aim) { this.target = { hit: null, label: '' }; return }
+    let hit = raycastVoxels(this.world, aim.origin, aim.direction, aim.maxDistance)
+    if (hit && this.cameraMode === 'third-person') {
+      const surfaceDistance = hit.distance + 0.001
+      const surface = {
+        x: aim.origin.x + aim.direction.x * surfaceDistance,
+        y: aim.origin.y + aim.direction.y * surfaceDistance,
+        z: aim.origin.z + aim.direction.z * surfaceDistance,
+      }
+      const eye = {
       x: this.player.position.x,
       y: this.player.position.y + this.config.player.eyeHeight,
       z: this.player.position.z,
+      }
+      const line = { x: surface.x - eye.x, y: surface.y - eye.y, z: surface.z - eye.z }
+      const reach = Math.hypot(line.x, line.y, line.z)
+      const eyeHit = reach <= this.config.interaction.reach
+        ? raycastVoxels(this.world, eye, line, reach + 0.01)
+        : null
+      if (!eyeHit || !sameVoxel(eyeHit.voxel, hit.voxel)) hit = null
     }
-    const hit = raycastVoxels(this.world, origin, viewDirection(this.player), this.config.interaction.reach)
     this.target = { hit, label: hit ? blockById(this.world.getBlock(hit.voxel.x, hit.voxel.y, hit.voxel.z)).label : '' }
   }
 
@@ -101,10 +132,11 @@ export class GameSession {
     return this.target
   }
 
-  getHudSnapshot(device: InputDevice, paused: boolean, timeOfDay: TimeOfDay): HudSnapshot {
+  getHudSnapshot(device: InputDevice, paused: boolean, timeOfDay: TimeOfDay, cameraMode: CameraMode): HudSnapshot {
     return {
       phase: this.phase,
       paused,
+      cameraMode,
       timeOfDay,
       placedCrystals: this.placedCrystals(),
       requiredCrystals: this.config.session.requiredCrystals,
@@ -143,7 +175,7 @@ export class GameSession {
     if (!edit.changed) return
     this.inventory[spec.drop] += 1
     this.events.push({ type: 'sound', sound: spec.drop === 'crystal' ? 'crystal' : 'break' })
-    this.events.push({ type: 'edit', dirtyChunks: edit.dirtyChunks, voxel: hit.voxel, block: spec.drop })
+    this.events.push({ type: 'edit', action: 'break', dirtyChunks: edit.dirtyChunks, voxel: hit.voxel, block: spec.drop })
     this.refreshTarget()
   }
 
@@ -168,7 +200,7 @@ export class GameSession {
     }
     this.inventory[key] -= 1
     this.events.push({ type: 'sound', sound: 'place' })
-    this.events.push({ type: 'edit', dirtyChunks: edit.dirtyChunks, voxel: hit.adjacent, block: key })
+    this.events.push({ type: 'edit', action: 'place', dirtyChunks: edit.dirtyChunks, voxel: hit.adjacent, block: key })
     if (this.placedCrystals() === this.config.session.requiredCrystals) this.end('victory')
     this.refreshTarget()
   }
