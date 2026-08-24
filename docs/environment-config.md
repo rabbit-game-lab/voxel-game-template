@@ -4,11 +4,38 @@
 
 ## Cielo y hora visual
 
-No existe un reloj: la “hora” es un preset coordinado de colores y dirección solar.
+El sistema ofrece dos presets coordinados, `day` y `night`. No simula el paso del tiempo: cambiar de modo activa recursos ya creados y actualiza cielo, sol/luna, estrellas, luz, niebla, nubes, terreno y agua sin regenerar chunks.
 
-- Mañana cálida: subir rojo en `horizon` y `sunColor`, usar niebla clara y un sol bajo (`sunEuler[0]` cercano a 25–35).
-- Mediodía: acercar `zenith` a azul, aclarar `ambient` y elevar el sol (`sunEuler[0]` cercano a 55–70).
-- Atardecer: horizonte naranja/rosa, zenith más oscuro, ambient desaturado y niebla del mismo matiz.
+Para hacer que el juego arranque siempre de noche:
+
+```ts
+sky: {
+  initialMode: 'night',
+  showToggleButton: false,
+  presets: { /* conservar day y night */ },
+  stars: { /* conservar configuración válida */ },
+}
+```
+
+`initialMode` es la única modificación necesaria para pedidos como “hacé que el juego sea de noche”. `showToggleButton: false` retira el botón temporal sin desactivar el sistema. Si se conserva en `true`, el botón ☾/☀ aparece junto a pausa durante el juego.
+
+Cada preset incluye:
+
+- `zenith`, `horizon`, `ambient` y `fogColor` para la atmósfera.
+- `fogStart/fogEnd` para visibilidad.
+- `celestialColor`, `celestialEuler` y `celestialScale` para sol o luna.
+- `lightColor/lightIntensity` para la luz direccional.
+- `cloudColor`, `worldTint` y `waterTint` para que el resto de la escena acompañe el modo.
+
+Las estrellas se generan una vez usando `count`, `seedOffset`, `color` y `size`; sólo se dibujan de noche. El límite es 96.
+
+### Recetas AI
+
+- “Hacé que siempre sea de noche”: cambiar sólo `initialMode` a `night`.
+- “Sacá el botón día/noche”: cambiar sólo `showToggleButton` a `false`.
+- “Hacé una noche más oscura”: ajustar el preset `night`, especialmente `zenith`, `horizon`, `worldTint` y `fogColor`.
+- “Creá un atardecer”: modificar el preset `day` con horizonte cálido, cuerpo celeste bajo y niebla coordinada.
+- “Quiero más estrellas”: subir `stars.count` sin superar 96; no crear una entidad por estrella.
 
 Usar siempre colores hex de seis dígitos. Mantener `fogStart < fogEnd` y el final por debajo o cerca de `camera.farClip`.
 
@@ -72,4 +99,4 @@ ambience: { enabled: false, volume: 0, waterInterval: [5, 9], windInterval: [8, 
 
 ## Extender el sistema
 
-Una feature nueva implementa internamente `update`, `reset`, `setPaused`, `destroy` y `drawCalls`, y se registra en `FEATURE_FACTORIES`. Sólo su configuración tipada y validada se expone en `game.config.ts`; no se modifica el loop principal. Mantener geometría combinada, capacidad fija, determinismo por seed y recursos reutilizables entre restarts.
+Una feature nueva implementa internamente `update`, `reset`, `setPaused`, `setTimeOfDay`, `destroy` y `stats`, y se registra en `FEATURE_FACTORIES`. Sólo su configuración tipada y validada se expone en `game.config.ts`; no se modifica el loop principal. Mantener geometría combinada, capacidad fija, determinismo por seed y recursos reutilizables entre restarts.

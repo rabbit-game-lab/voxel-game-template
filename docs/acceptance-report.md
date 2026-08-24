@@ -49,6 +49,15 @@ La ampliación de ambiente del 2026-08-24 volvió a ejecutar `check`, `build` y 
 - `opacity: 1.68` fue rechazado antes del boot con overlay legible `environment.water.opacity must be in (0, 1)`.
 - Capturas de revisión realizadas en el browser de aceptación a 1280×720 y 691×807; no se reemplazó el screenshot histórico del README.
 
+## Modo día y noche
+
+- El botón temporal de autoría aparece junto a Pausa sólo durante `playing`: en día muestra `☾` con etiqueta accesible `Cambiar a modo noche`; en noche muestra `☀` y `Cambiar a modo día`.
+- La alternancia visual fue verificada en ejecución: gradiente nocturno, luna, estrellas, nubes, niebla, luz, terreno y agua cambian como un preset coordinado; HUD, crosshair y hotbar conservan contraste.
+- Las 72 estrellas se combinan en una única malla. El perfil pasó de 7 draw calls ambientales en día a 8 en noche, sin reconstruir chunks ni crear entidades al alternar.
+- Una configuración temporal `initialMode: 'night'` + `showToggleButton: false` inició directamente de noche sin renderizar el botón, confirmando la ruta plug-and-play que quedará después de retirar esa UI.
+- Restart desde noche restauró el `initialMode` configurado y mantuvo exactamente 1 canvas, 1 HUD y 6 slots, sin duplicar recursos ni listeners.
+- Revisión responsive realizada a 1280×720 y 691×807: botón de modo y Pausa no se superponen. La consola permaneció sin errores ni warnings.
+
 ## Perfil observado
 
 Muestra de tres segundos en el browser de prueba a viewport 1920×1080:

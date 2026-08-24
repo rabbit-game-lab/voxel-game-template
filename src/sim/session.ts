@@ -4,6 +4,7 @@ import {
 } from '../data/blocks'
 import type { GameConfig } from '../game.config'
 import { naturalReplacementAt } from '../environment/lakes'
+import type { TimeOfDay } from '../environment/config'
 import type { VoxelCoord } from '../voxel/coords'
 import { generateWorld } from '../voxel/generator'
 import { raycastVoxels } from '../voxel/raycast'
@@ -100,10 +101,11 @@ export class GameSession {
     return this.target
   }
 
-  getHudSnapshot(device: InputDevice, paused: boolean): HudSnapshot {
+  getHudSnapshot(device: InputDevice, paused: boolean, timeOfDay: TimeOfDay): HudSnapshot {
     return {
       phase: this.phase,
       paused,
+      timeOfDay,
       placedCrystals: this.placedCrystals(),
       requiredCrystals: this.config.session.requiredCrystals,
       device,

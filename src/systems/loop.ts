@@ -1,6 +1,7 @@
 import * as pc from 'playcanvas'
 import { ASSETS } from '../data/assets'
 import { BLOCKS } from '../data/blocks'
+import type { TimeOfDay } from '../environment/config'
 import { createEffects, type EffectsHandle } from '../entities/effects'
 import { createEnvironment, type EnvironmentHandle } from '../entities/environment'
 import { createScene, type SceneHandle } from '../entities/scene'
@@ -57,6 +58,7 @@ export function setupGame(app: pc.Application): GameHandle {
   let lastDevice: InputSnapshot['device'] = 'keyboard'
   let pendingSlot: number | null = null
   let muted = false
+  let timeOfDay: TimeOfDay = CONFIG.environment.sky.initialMode
   let performanceFrames = 0
   let performanceElapsed = 0
   let performanceWorst = 0
@@ -75,6 +77,10 @@ export function setupGame(app: pc.Application): GameHandle {
     current.view.rebuildAll()
     current.effects.reset()
     current.environment.reset()
+    timeOfDay = CONFIG.environment.sky.initialMode
+    current.scene.setTimeOfDay(timeOfDay)
+    current.environment.setTimeOfDay(timeOfDay)
+    current.view.setTimeOfDay(timeOfDay)
     current.audio.reset()
     current.input.clear()
     current.input.releaseFocus()
@@ -96,6 +102,15 @@ export function setupGame(app: pc.Application): GameHandle {
     },
     restart,
     togglePause() { runtime?.pause.toggle() },
+    toggleTimeOfDay() {
+      const current = runtime
+      if (!current) return
+      timeOfDay = timeOfDay === 'day' ? 'night' : 'day'
+      current.scene.setTimeOfDay(timeOfDay)
+      current.environment.setTimeOfDay(timeOfDay)
+      current.view.setTimeOfDay(timeOfDay)
+      updatePresentation(current)
+    },
     selectSlot(index) { pendingSlot = index },
     capturePointer() { void runtime?.input.requestFocus() },
   })
@@ -105,7 +120,7 @@ export function setupGame(app: pc.Application): GameHandle {
     current.view.setSelection(current.session.phase === 'playing' ? target?.voxel ?? null : null)
     current.view.setSockets(CONFIG.world.beaconSockets.map((socket) =>
       current.session.world.getBlock(socket[0], socket[1], socket[2]) === BLOCKS.crystal.id))
-    hud.update(current.session.getHudSnapshot(lastDevice, current.pause.isPaused()), current.input.isFocused())
+    hud.update(current.session.getHudSnapshot(lastDevice, current.pause.isPaused(), timeOfDay), current.input.isFocused())
   }
 
   function processEvents(current: Runtime): void {

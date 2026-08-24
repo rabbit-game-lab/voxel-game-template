@@ -64,9 +64,25 @@ export const CONFIG = {
   hud: { heartbeat: 0.25 },
   environment: {
     sky: {
-      zenith: '#74b9e8', horizon: '#c9e5dc', ambient: '#526963',
-      fogColor: '#b6d8d3', fogStart: 32, fogEnd: 76,
-      sunColor: '#ffe2aa', sunEuler: [48, -32, 0],
+      initialMode: 'day',
+      showToggleButton: true,
+      presets: {
+        day: {
+          zenith: '#74b9e8', horizon: '#c9e5dc', ambient: '#526963',
+          fogColor: '#b6d8d3', fogStart: 32, fogEnd: 76,
+          celestialColor: '#ffe2aa', celestialEuler: [48, -32, 0], celestialScale: 5.2,
+          lightColor: '#ffe2aa', lightIntensity: 0.88, cloudColor: '#fff8e5',
+          worldTint: '#ffffff', waterTint: '#ffffff',
+        },
+        night: {
+          zenith: '#08142e', horizon: '#293757', ambient: '#172238',
+          fogColor: '#1c2d49', fogStart: 28, fogEnd: 68,
+          celestialColor: '#dbe9ff', celestialEuler: [32, 38, 0], celestialScale: 4.4,
+          lightColor: '#8ea7d8', lightIntensity: 0.28, cloudColor: '#6d7894',
+          worldTint: '#53617c', waterTint: '#435978',
+        },
+      },
+      stars: { enabled: true, count: 72, seedOffset: 9127, color: '#eaf2ff', size: [0.18, 0.42] },
     },
     clouds: {
       enabled: true, seedOffset: 7001,

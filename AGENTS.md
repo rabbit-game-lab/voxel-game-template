@@ -16,6 +16,7 @@ Do not edit `src/rabbit/`, `scripts/check.mjs`, `rabbit.json`, or the dependency
 - `src/systems/loop.ts` is the composition root and Rabbit lifecycle owner.
 - Keep every `src/` file below 400 lines; split near 250–300 lines.
 - Keep all public environment tuning in `CONFIG.environment`; algorithms, render resources and lifecycle remain internal.
+- Route “make it night/day” requests through `environment.sky.initialMode` and the existing `day/night` presets. Hide the temporary UI with `showToggleButton`; do not build a parallel time-of-day system.
 
 ## Required gates
 

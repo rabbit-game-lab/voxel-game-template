@@ -1,5 +1,23 @@
 export type EnvironmentVec2 = readonly [number, number]
 export type EnvironmentVec3 = readonly [number, number, number]
+export type TimeOfDay = 'day' | 'night'
+
+export interface SkyPresetConfig {
+  zenith: string
+  horizon: string
+  ambient: string
+  fogColor: string
+  fogStart: number
+  fogEnd: number
+  celestialColor: string
+  celestialEuler: EnvironmentVec3
+  celestialScale: number
+  lightColor: string
+  lightIntensity: number
+  cloudColor: string
+  worldTint: string
+  waterTint: string
+}
 
 export interface CloudLayerConfig {
   count: number
@@ -19,14 +37,16 @@ export interface LakeConfig {
 
 export interface EnvironmentConfig {
   sky: {
-    zenith: string
-    horizon: string
-    ambient: string
-    fogColor: string
-    fogStart: number
-    fogEnd: number
-    sunColor: string
-    sunEuler: EnvironmentVec3
+    initialMode: TimeOfDay
+    showToggleButton: boolean
+    presets: Readonly<Record<TimeOfDay, SkyPresetConfig>>
+    stars: {
+      enabled: boolean
+      count: number
+      seedOffset: number
+      color: string
+      size: EnvironmentVec2
+    }
   }
   clouds: {
     enabled: boolean

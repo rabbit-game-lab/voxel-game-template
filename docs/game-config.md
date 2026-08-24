@@ -27,7 +27,10 @@
 
 ## Ambiente
 
-- `environment.sky` coordina domo, luz, clear color y niebla; `fogStart` debe ser menor que `fogEnd`.
+- `environment.sky.initialMode` acepta `day` o `night`. Cambiarlo es la receta mínima para que una AI haga arrancar el juego de día o de noche.
+- `environment.sky.showToggleButton` muestra u oculta el selector ☾/☀ sin eliminar los presets ni el controlador runtime.
+- `environment.sky.presets.day/night` coordina domo, cuerpo celeste, luz, niebla, nubes, terreno y agua. En cada preset `fogStart` debe ser menor que `fogEnd`.
+- `environment.sky.stars` controla una única malla nocturna de hasta 96 estrellas; se genera una vez y sólo se activa en modo noche.
 - `environment.clouds.layers` admite hasta 16 nubes en total. Cada capa define cantidad, altitud, velocidad y rango de escala.
 - `environment.water.lakes` admite múltiples lagos deterministas. El centro usa `[x, yDelBloqueDeAgua, z]`; radios y costa deben caber completamente dentro del mundo y no superponer spawn, faro o cristales.
 - `surfaceInset` desplaza la cara superior dentro del bloque para evitar z-fighting. `wadeSpeedMultiplier` sólo afecta velocidad horizontal con agua en los pies.

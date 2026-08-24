@@ -1,6 +1,7 @@
 import * as pc from 'playcanvas'
 import type { AssetsHandle } from '../rabbit/assets'
-import { makeMat } from './helpers'
+import type { TimeOfDay } from '../environment/config'
+import { color, makeMat } from './helpers'
 import type { GameConfig } from '../game.config'
 import type { ChunkCoord, VoxelCoord } from '../voxel/coords'
 import { chunkKey } from '../voxel/coords'
@@ -20,6 +21,7 @@ export interface WorldViewHandle {
   update(): void
   setSelection(voxel: VoxelCoord | null): void
   setSockets(occupied: readonly boolean[]): void
+  setTimeOfDay(mode: TimeOfDay): void
   stats(): {
     chunks: number; faces: number; liquidFaces: number; triangles: number
     drawCalls: number; waterDrawCalls: number; maxRemeshMs: number
@@ -110,6 +112,13 @@ export function createWorldView(
   liquidMaterial.cull = pc.CULLFACE_NONE
   liquidMaterial.update()
 
+  const setTimeOfDay = (mode: TimeOfDay): void => {
+    const preset = config.environment.sky.presets[mode]
+    material.emissive.copy(color(preset.worldTint)); material.update()
+    liquidMaterial.emissive.copy(color(preset.waterTint)); liquidMaterial.update()
+  }
+  setTimeOfDay(config.environment.sky.initialMode)
+
   const chunkRenders = new Map<string, ChunkRender>()
   const faceCounts = new Map<string, { opaque: number; liquid: number }>()
   const dirty = new Map<string, ChunkCoord>()
@@ -196,6 +205,7 @@ export function createWorldView(
     setSockets(occupied) {
       socketMarkers.forEach((marker, index) => { marker.enabled = !occupied[index] })
     },
+    setTimeOfDay,
     stats() {
       const opaqueFaces = [...faceCounts.values()].reduce((sum, value) => sum + value.opaque, 0)
       const liquidFaces = [...faceCounts.values()].reduce((sum, value) => sum + value.liquid, 0)

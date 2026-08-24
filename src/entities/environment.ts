@@ -1,12 +1,12 @@
 import * as pc from 'playcanvas'
+import type { TimeOfDay } from '../environment/config'
 import type { GameConfig } from '../game.config'
 import type { PlayerState } from '../sim/types'
 import type { VoxelWorld } from '../voxel/world'
 import { createDecorationFeature, createParticleFeature } from './environment-decorations'
-import { makeMat, prim } from './helpers'
+import { createSkyFeature } from './environment-sky'
 import {
-  addBox, builder, createMesh, createSkyDome, renderMesh, rgb, seededRandom,
-  vertexMaterial, type MeshBuilder,
+  addBox, builder, createMesh, renderMesh, rgb, seededRandom, vertexMaterial, type MeshBuilder,
 } from './environment-geometry'
 
 export interface FeatureContext {
@@ -29,6 +29,7 @@ export interface EnvironmentFeature {
   update(dt: number, player: PlayerState): void
   reset(): void
   setPaused(paused: boolean): void
+  setTimeOfDay(mode: TimeOfDay): void
   stats(): EnvironmentFeatureStats
   destroy(): void
 }
@@ -37,6 +38,7 @@ export interface EnvironmentHandle {
   update(dt: number, player: PlayerState): void
   reset(): void
   setPaused(paused: boolean): void
+  setTimeOfDay(mode: TimeOfDay): void
   stats(): { drawCalls: number; clouds: number; reeds: number; rocks: number; particles: number }
   destroy(): void
 }
@@ -48,36 +50,8 @@ function featureStats(
   return { drawCalls, clouds: 0, reeds: 0, rocks: 0, particles: 0, ...counts }
 }
 
-function createSkyFeature(context: FeatureContext): EnvironmentFeature {
-  const root = new pc.Entity('Sky Atmosphere')
-  context.root.addChild(root)
-  const sky = context.config.environment.sky
-  const material = vertexMaterial(true)
-  material.depthWrite = false
-  material.cull = pc.CULLFACE_NONE
-  material.update()
-  const mesh = createSkyDome(context.app.graphicsDevice, 82, rgb(sky.zenith), rgb(sky.horizon))
-  const dome = renderMesh('Gradient Sky', root, mesh, material)
-  dome.render!.meshInstances[0].cull = false
-
-  const sunMaterial = makeMat(sky.sunColor, { unlit: true, emissive: sky.sunColor, emissiveIntensity: 1.8 })
-  const sunPivot = new pc.Entity('Sun Pivot')
-  sunPivot.setLocalEulerAngles(...sky.sunEuler)
-  root.addChild(sunPivot)
-  prim('Voxel Sun', 'cylinder', {
-    parent: sunPivot, material: sunMaterial, position: [0, 0, 65],
-    rotation: [90, 0, 0], scale: [5.2, 0.16, 5.2],
-  })
-  return {
-    update() { root.setPosition(context.camera.getPosition()) },
-    reset() {}, setPaused() {},
-    stats: () => featureStats(2),
-    destroy() { root.destroy(); mesh.destroy(); material.destroy(); sunMaterial.destroy() },
-  }
-}
-
 function addCloud(data: MeshBuilder, x: number, y: number, z: number, scale: number): void {
-  const white = rgb('#fff8e5')
+  const white = rgb('#ffffff')
   addBox(data, [x, y, z], [scale * 2.8, scale * 0.72, scale * 1.45], white)
   addBox(data, [x - scale * 1.35, y - scale * 0.06, z], [scale * 1.25, scale * 0.56, scale], white)
   addBox(data, [x + scale * 1.4, y - scale * 0.08, z + scale * 0.12], [scale * 1.4, scale * 0.52, scale], white)
@@ -108,6 +82,12 @@ function createCloudFeature(context: FeatureContext): EnvironmentFeature | null 
     const entity = renderMesh(`Cloud Layer ${layerIndex + 1}`, root, mesh, material)
     runtimes.push({ entity, mesh, speed: layer.speed, offset: 0 })
   })
+  const setTimeOfDay = (mode: TimeOfDay): void => {
+    const cloudColor = rgb(context.config.environment.sky.presets[mode].cloudColor)
+    material.emissive.set(cloudColor[0] / 255, cloudColor[1] / 255, cloudColor[2] / 255)
+    material.update()
+  }
+  setTimeOfDay(context.config.environment.sky.initialMode)
   return {
     update(dt) {
       for (const layer of runtimes) {
@@ -117,6 +97,7 @@ function createCloudFeature(context: FeatureContext): EnvironmentFeature | null 
     },
     reset() { for (const layer of runtimes) { layer.offset = 0; layer.entity.setLocalPosition(0, 0, 0) } },
     setPaused() {},
+    setTimeOfDay,
     stats: () => featureStats(runtimes.length, {
       clouds: clouds.layers.reduce((sum, layer) => sum + layer.count, 0),
     }),
@@ -141,6 +122,7 @@ export function createEnvironment(
     update(dt, player) { if (!destroyed) features.forEach((feature) => feature.update(dt, player)) },
     reset() { if (!destroyed) features.forEach((feature) => feature.reset()) },
     setPaused(paused) { if (!destroyed) features.forEach((feature) => feature.setPaused(paused)) },
+    setTimeOfDay(mode) { if (!destroyed) features.forEach((feature) => feature.setTimeOfDay(mode)) },
     stats() {
       const total = featureStats(0)
       for (const feature of features) {

@@ -48,11 +48,7 @@ export function validateConfig(config: GameConfig): void {
 
   const { environment } = config
   for (const [label, value] of Object.entries({
-    zenith: environment.sky.zenith,
-    horizon: environment.sky.horizon,
-    ambient: environment.sky.ambient,
-    fogColor: environment.sky.fogColor,
-    sunColor: environment.sky.sunColor,
+    stars: environment.sky.stars.color,
     water: environment.water.color,
     shallowWater: environment.water.shallowColor,
     reeds: environment.decorations.reeds.color,
@@ -63,11 +59,47 @@ export function validateConfig(config: GameConfig): void {
   })) {
     if (!validColor(value)) errors.push(`${label} must be a six-digit hex color`)
   }
-  if (!finite(environment.sky.fogStart) || !finite(environment.sky.fogEnd) ||
-      environment.sky.fogStart < 0 || environment.sky.fogStart >= environment.sky.fogEnd) {
-    errors.push('environment.sky fog range must be finite, non-negative and increasing')
+  if (environment.sky.initialMode !== 'day' && environment.sky.initialMode !== 'night') {
+    errors.push('environment.sky.initialMode must be day or night')
   }
-  if (!environment.sky.sunEuler.every(finite)) errors.push('environment.sky.sunEuler must be finite')
+  if (typeof environment.sky.showToggleButton !== 'boolean') {
+    errors.push('environment.sky.showToggleButton must be boolean')
+  }
+  for (const mode of ['day', 'night'] as const) {
+    const preset = environment.sky.presets[mode]
+    for (const [label, value] of Object.entries({
+      zenith: preset.zenith, horizon: preset.horizon, ambient: preset.ambient,
+      fogColor: preset.fogColor, celestialColor: preset.celestialColor,
+      lightColor: preset.lightColor, cloudColor: preset.cloudColor,
+      worldTint: preset.worldTint, waterTint: preset.waterTint,
+    })) {
+      if (!validColor(value)) errors.push(`environment.sky.presets.${mode}.${label} must be a six-digit hex color`)
+    }
+    if (!finite(preset.fogStart) || !finite(preset.fogEnd) ||
+        preset.fogStart < 0 || preset.fogStart >= preset.fogEnd) {
+      errors.push(`environment.sky.presets.${mode} fog range must be finite, non-negative and increasing`)
+    }
+    if (!preset.celestialEuler.every(finite)) {
+      errors.push(`environment.sky.presets.${mode}.celestialEuler must be finite`)
+    }
+    if (!finite(preset.celestialScale) || preset.celestialScale <= 0 || preset.celestialScale > 16) {
+      errors.push(`environment.sky.presets.${mode}.celestialScale must be in (0, 16]`)
+    }
+    if (!finite(preset.lightIntensity) || preset.lightIntensity < 0 || preset.lightIntensity > 4) {
+      errors.push(`environment.sky.presets.${mode}.lightIntensity must be in [0, 4]`)
+    }
+  }
+  if (!Number.isInteger(environment.sky.stars.count) || environment.sky.stars.count < 0 ||
+      environment.sky.stars.count > 96) {
+    errors.push('environment.sky.stars.count must be an integer in [0, 96]')
+  }
+  if (!Number.isInteger(environment.sky.stars.seedOffset)) {
+    errors.push('environment.sky.stars.seedOffset must be an integer')
+  }
+  if (!environment.sky.stars.size.every(finite) || environment.sky.stars.size[0] <= 0 ||
+      environment.sky.stars.size[1] < environment.sky.stars.size[0] || environment.sky.stars.size[1] > 2) {
+    errors.push('environment.sky.stars.size must be positive, increasing and at most 2')
+  }
   if (!Number.isInteger(environment.clouds.seedOffset)) errors.push('environment.clouds.seedOffset must be an integer')
   let cloudCount = 0
   for (const [index, layer] of environment.clouds.layers.entries()) {

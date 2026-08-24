@@ -4,7 +4,7 @@
 
 Template 3D FPS de construcción por bloques para Rabbit Game Lab, construido con PlayCanvas, Vite y TypeScript estricto. El primer objetivo jugable es recuperar tres cristales expuestos y colocarlos en los sockets luminosos del faro.
 
-La isla incluye un ambiente natural enteramente procedural: cielo con gradiente y sol, dos capas de nubes voxel, un lago orgánico transitable, costa con juncos y piedras, partículas y audio suave de viento/agua. No requiere assets ambientales ni dependencias adicionales.
+La isla incluye un ambiente natural enteramente procedural: presets coordinados de día/noche, sol, luna y estrellas, dos capas de nubes voxel, un lago orgánico transitable, costa con juncos y piedras, partículas y audio suave de viento/agua. No requiere assets ambientales ni dependencias adicionales.
 
 ## Ejecutar
 
@@ -27,8 +27,8 @@ node ~/.codex/skills/create-rabbit-playcanvas-game/scripts/audit-template.mjs .
 
 | Dispositivo | Movimiento y cámara | Acciones |
 |---|---|---|
-| Desktop | WASD; mover el cursor rota la cámara; Shift para sprint | Espacio salta, LMB rompe, RMB coloca, rueda/1–6 selecciona, Esc/P pausa |
-| Touch | Joystick izquierdo, drag derecho | Botones de salto, romper y colocar; hotbar tocable |
+| Desktop | WASD; mover el cursor rota la cámara; Shift para sprint | Espacio salta, LMB rompe, RMB coloca, rueda/1–6 selecciona, ☾/☀ cambia día/noche, Esc/P pausa |
+| Touch | Joystick izquierdo, drag derecho | Botones de salto, romper y colocar; hotbar y selector día/noche tocables |
 | Gamepad | Stick izquierdo y derecho | A salta, RT rompe, LT coloca, LB/RB cambia slot, Start pausa |
 
 Sin pointer lock, mover el cursor sobre el canvas rota la cámara sin mantener ningún botón. El pointer lock queda disponible como modo opcional para giros ilimitados; LMB rompe y RMB coloca en ambos modos.
@@ -48,7 +48,7 @@ El mundo mide 48×32×48 y contiene 18 chunks de 16³. Se generan todos antes de
 
 ## Tuning para AI
 
-`CONFIG.environment` concentra colores de cielo, niebla y sol, capas de nubes, lagos, densidades de costa, partículas y audio. Para mover un lago, crear un preset o desactivar una feature no hace falta tocar el game loop. Las recetas plug-and-play están en [`docs/environment-config.md`](docs/environment-config.md).
+`CONFIG.environment` concentra los presets `day/night`, modo inicial, visibilidad del botón temporal, estrellas, nubes, lagos, densidades de costa, partículas y audio. Para arrancar siempre de noche basta cambiar `environment.sky.initialMode` a `night`; el botón se retira con `showToggleButton: false` sin borrar el sistema. Las recetas plug-and-play están en [`docs/environment-config.md`](docs/environment-config.md).
 
 ## Asset CC0
 

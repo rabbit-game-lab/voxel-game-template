@@ -5,6 +5,7 @@ export interface HudActions {
   start(): void
   restart(): void
   togglePause(): void
+  toggleTimeOfDay(): void
   selectSlot(index: number): void
   capturePointer(): void
 }
@@ -33,8 +34,9 @@ const CSS = `
   .v-slot.is-locked{opacity:.43}.v-swatch{width:28px;height:28px;background:var(--swatch);border:2px solid #fff8;
     box-shadow:inset -5px -5px 0 #0002}.v-key{position:absolute;left:4px;top:1px;font-size:10px}
   .v-count{position:absolute;right:4px;bottom:1px;font-size:13px}
-  .v-pause{position:absolute;right:14px;top:14px;width:43px;height:43px;pointer-events:auto;border:2px solid #e7d99e;
+  .v-pause,.v-time{position:absolute;top:14px;width:43px;height:43px;pointer-events:auto;border:2px solid #e7d99e;
     background:#203b38e8;border-radius:3px;box-shadow:0 4px 0 #10201d}
+  .v-pause{right:14px}.v-time{right:65px;font-size:22px;line-height:1}.v-time.is-night{background:#17233de8;color:#dbe9ff}
   .v-capture{position:absolute;top:68px;left:50%;transform:translateX(-50%);pointer-events:auto;
     border:1px solid #ffe9a8;background:#6b4e2cdd;border-radius:3px;padding:7px 10px;font-size:12px}
   .v-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:auto;
@@ -48,7 +50,8 @@ const CSS = `
     border-radius:3px;box-shadow:0 5px 0 #793f28;text-transform:uppercase;letter-spacing:.08em}
   .v-hints{position:absolute;left:14px;bottom:14px;padding:8px 10px;background:#10201dbd;border-left:3px solid #e3d39e;
     font-size:11px;line-height:1.45;max-width:220px}
-  @media(max-width:700px),(pointer:coarse){.v-objective{top:9px;font-size:13px}.v-pause{top:8px;right:8px}
+  @media(max-width:700px),(pointer:coarse){.v-objective{top:9px;font-size:13px}.v-pause,.v-time{top:8px}
+    .v-pause{right:8px}.v-time{right:58px}
     .v-hotbar{bottom:92px;gap:3px}.v-slot{width:46px;height:46px}.v-swatch{width:22px;height:22px}
     .v-hints{display:none}.v-capture{display:none}}
   @media(max-width:390px){.v-slot{width:42px;height:42px}.v-hotbar{bottom:84px}.v-objective{font-size:11px}}
@@ -62,7 +65,8 @@ const SWATCHES: Record<string, string> = {
 export function createHud(container: HTMLElement, config: GameConfig, actions: HudActions): HudHandle {
   container.innerHTML = `<div class="voxel-ui"><style>${CSS}</style>
     <div class="v-objective"></div><div class="v-crosshair"></div><div class="v-target"></div>
-    <div class="v-hotbar"></div><button class="v-pause" aria-label="Pausa">Ⅱ</button>
+    <div class="v-hotbar"></div><button class="v-time" aria-label="Cambiar a modo noche">☾</button>
+    <button class="v-pause" aria-label="Pausa">Ⅱ</button>
     <button class="v-capture">Mouse infinito (opcional)</button><div class="v-hints"></div><div class="v-overlay"></div></div>`
   const root = container.firstElementChild as HTMLElement
   const objective = root.querySelector('.v-objective') as HTMLElement
@@ -70,11 +74,13 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
   const hotbar = root.querySelector('.v-hotbar') as HTMLElement
   const overlay = root.querySelector('.v-overlay') as HTMLElement
   const hints = root.querySelector('.v-hints') as HTMLElement
+  const timeButton = root.querySelector('.v-time') as HTMLButtonElement
   const pauseButton = root.querySelector('.v-pause') as HTMLButtonElement
   const capture = root.querySelector('.v-capture') as HTMLButtonElement
   let last = ''
 
   pauseButton.addEventListener('click', actions.togglePause)
+  timeButton.addEventListener('click', actions.toggleTimeOfDay)
   capture.addEventListener('click', actions.capturePointer)
 
   function overlayMarkup(snapshot: HudSnapshot): string {
@@ -97,6 +103,11 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
       if (signature === last) return
       last = signature
       objective.textContent = `Cristales colocados: ${snapshot.placedCrystals}/${snapshot.requiredCrystals}`
+      const nextMode = snapshot.timeOfDay === 'day' ? 'noche' : 'día'
+      timeButton.textContent = snapshot.timeOfDay === 'day' ? '☾' : '☀'
+      timeButton.setAttribute('aria-label', `Cambiar a modo ${nextMode}`)
+      timeButton.title = `Cambiar a modo ${nextMode}`
+      timeButton.classList.toggle('is-night', snapshot.timeOfDay === 'night')
       target.textContent = snapshot.hasTarget ? snapshot.targetLabel : ''
       hotbar.innerHTML = snapshot.slots.map((slot, index) => `<button class="v-slot${slot.selected ? ' is-selected' : ''}${slot.locked ? ' is-locked' : ''}"
         data-slot="${index}" aria-label="${slot.label}"><span class="v-key">${index + 1}</span>
@@ -116,6 +127,7 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
       const playing = snapshot.phase === 'playing' && !snapshot.paused
       capture.style.display = playing && snapshot.device === 'keyboard' && !pointerCaptured ? 'block' : 'none'
       pauseButton.style.display = snapshot.phase === 'playing' ? 'block' : 'none'
+      timeButton.style.display = config.environment.sky.showToggleButton && snapshot.phase === 'playing' ? 'block' : 'none'
       root.querySelector<HTMLElement>('.v-crosshair')!.style.display = playing ? 'block' : 'none'
     },
     showError(message) {

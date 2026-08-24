@@ -81,8 +81,18 @@ export function createDecorationFeature(context: FeatureContext): EnvironmentFea
     }
   }
   if (drawCalls === 0) { root.destroy(); return null }
+  const setTimeOfDay = (mode: 'day' | 'night'): void => {
+    const tint = rgb(context.config.environment.sky.presets[mode].worldTint)
+    for (const { material } of resources) {
+      const standard = material as pc.StandardMaterial
+      standard.emissive.set(tint[0] / 255, tint[1] / 255, tint[2] / 255)
+      standard.update()
+    }
+  }
+  setTimeOfDay(context.config.environment.sky.initialMode)
   return {
     update() {}, reset() {}, setPaused() {},
+    setTimeOfDay,
     stats: () => stats(drawCalls, { reeds: reedCount, rocks: rockCount }),
     destroy() { root.destroy(); resources.forEach(({ mesh, material }) => { mesh.destroy(); material.destroy() }) },
   }
@@ -121,6 +131,7 @@ export function createParticleFeature(context: FeatureContext): EnvironmentFeatu
     update() {},
     reset() { root.particlesystem?.reset(); root.particlesystem?.play() },
     setPaused(paused) { if (paused) root.particlesystem?.pause(); else root.particlesystem?.unpause() },
+    setTimeOfDay() {},
     stats: () => stats(1, { particles: spec.count }),
     destroy() { root.destroy(); texture.destroy() },
   }

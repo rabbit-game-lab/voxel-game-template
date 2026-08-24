@@ -19,6 +19,7 @@ Maintain the reusable Rabbit voxel template without breaking deterministic gener
 
 - Tune numbers, colors, spawn or landmarks in `src/game.config.ts`; extend `src/systems/config-validator.ts` for new invariants.
 - Tune sky, clouds, lakes, shore density, particles or ambience only through `CONFIG.environment`. Keep the public types in `src/environment/config.ts`, deterministic lake membership in `src/environment/lakes.ts`, and PlayCanvas factories in `src/entities/environment.ts`.
+- Handle “make it night/day” by changing `environment.sky.initialMode` or the existing `day/night` presets. Use `showToggleButton` only to expose/hide the temporary ☾/☀ control; preserve the shared runtime controller in scene, environment and world view.
 - Add a block in `src/data/blocks.ts`. Append a new stable numeric ID; never reorder or reuse an existing ID. Define all face tiles and inventory behavior.
 - Change generation in `src/voxel/generator.ts`. Preserve seed determinism and apply guaranteed landmarks after noise terrain.
 - Change storage or coordinates in `src/voxel/chunk.ts`, `coords.ts`, and `world.ts`. Preserve allocation-free reads and Euclidean negative-coordinate handling.
@@ -35,7 +36,8 @@ Maintain the reusable Rabbit voxel template without breaking deterministic gener
 - Block `0` remains air and chunks remain `Uint8Array(4096)` unless the user explicitly authorizes a format migration.
 - Never create one entity, collider, material or DOM node per block.
 - Water remains non-solid, non-raycastable, replaceable and absent from the hotbar. Breaking a placed block in a natural lake cell restores water without propagation.
-- Clouds and shore props remain merged by layer/category. Environment features implement `update/reset/setPaused/destroy/stats` and are registered through the internal factory list.
+- Clouds and shore props remain merged by layer/category. Environment features implement `update/reset/setPaused/setTimeOfDay/destroy/stats` and are registered through the internal factory list.
+- Day/night switches reuse both prebuilt domes and celestial bodies, one merged star mesh and shared terrain/cloud materials. Do not rebuild chunks or recreate resources when toggling.
 - Edits dirty the owner chunk plus neighbors touched at chunk boundaries.
 - Pause and end states block simulation, editing, scoring and session audio.
 - Restart regenerates seed `1337` and resets world, sockets, crystals, inventory, player and HUD without duplicating resources or listeners.
@@ -58,6 +60,7 @@ For gameplay or lifecycle changes also verify:
 - keyboard/mouse and pointer-lock fallback;
 - touch-sized landscape and portrait layout;
 - deterministic lake/cloud/decoration layout plus individual environment toggles;
+- both day/night presets, initial night boot, hidden toggle config and restart-to-initial-mode;
 - water DDA pass-through, wading, displacement/restoration and a cross-chunk liquid edit;
 - block edits at an ordinary voxel and a chunk boundary;
 - pause, victory, defeat, restart, and repeated restart;

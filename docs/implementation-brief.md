@@ -11,7 +11,7 @@ Content: Six solid block types, one hidden water block, one bounded island, thre
 Controls: Keyboard with hover mouse-look and optional pointer lock, touch joystick plus drag-look/buttons, standard gamepad.
 Assets and licenses: Quaternius `Blocks_PixelArt.png`, CC0 1.0; procedural audio and geometry.  
 Config sections: Session, player, camera, controls, world, interaction, HUD, environment, visuals, audio, performance.
-Environment: Camera-centered gradient sky and sun, two merged voxel-cloud layers, transparent chunk water, merged shore decoration meshes, fixed particle system and procedural ambience.
+Environment: Configurable day/night presets with sun, moon and merged stars; camera-centered gradient sky, two merged voxel-cloud layers, transparent chunk water, merged shore decoration meshes, fixed particle system and procedural ambience.
 System order: Input → fixed movement/collision/wading → raycast/actions → edits → opaque/liquid mesh queue → environment → render/HUD/audio.
 Rabbit capabilities: audio yes / pointerLock yes / storage no.  
 Performance target: 60 FPS desktop 1080p; at least 30 FPS mid-range mobile.  

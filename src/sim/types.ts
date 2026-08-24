@@ -1,4 +1,5 @@
 import type { BlockKey, HotbarBlockKey } from '../data/blocks'
+import type { TimeOfDay } from '../environment/config'
 import type { ChunkCoord, VoxelCoord } from '../voxel/coords'
 import type { RayHit } from '../voxel/raycast'
 
@@ -52,6 +53,7 @@ export interface HudSlot {
 export interface HudSnapshot {
   phase: GamePhase
   paused: boolean
+  timeOfDay: TimeOfDay
   placedCrystals: number
   requiredCrystals: number
   slots: readonly HudSlot[]
