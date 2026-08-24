@@ -57,6 +57,7 @@ La ampliación de ambiente del 2026-08-24 volvió a ejecutar `check`, `build` y 
 - Una configuración temporal `initialMode: 'night'` + `showToggleButton: false` inició directamente de noche sin renderizar el botón, confirmando la ruta plug-and-play que quedará después de retirar esa UI.
 - Restart desde noche restauró el `initialMode` configurado y mantuvo exactamente 1 canvas, 1 HUD y 6 slots, sin duplicar recursos ni listeners.
 - Revisión responsive realizada a 1280×720 y 691×807: botón de modo y Pausa no se superponen. La consola permaneció sin errores ni warnings.
+- Configuración entregada: `showToggleButton: false`; el selector queda oculto por defecto mientras los presets y el controlador día/noche permanecen disponibles para AI.
 
 ## Perfil observado
 

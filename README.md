@@ -27,8 +27,8 @@ node ~/.codex/skills/create-rabbit-playcanvas-game/scripts/audit-template.mjs .
 
 | Dispositivo | Movimiento y cámara | Acciones |
 |---|---|---|
-| Desktop | WASD; mover el cursor rota la cámara; Shift para sprint | Espacio salta, LMB rompe, RMB coloca, rueda/1–6 selecciona, ☾/☀ cambia día/noche, Esc/P pausa |
-| Touch | Joystick izquierdo, drag derecho | Botones de salto, romper y colocar; hotbar y selector día/noche tocables |
+| Desktop | WASD; mover el cursor rota la cámara; Shift para sprint | Espacio salta, LMB rompe, RMB coloca, rueda/1–6 selecciona, Esc/P pausa |
+| Touch | Joystick izquierdo, drag derecho | Botones de salto, romper y colocar; hotbar tocable |
 | Gamepad | Stick izquierdo y derecho | A salta, RT rompe, LT coloca, LB/RB cambia slot, Start pausa |
 
 Sin pointer lock, mover el cursor sobre el canvas rota la cámara sin mantener ningún botón. El pointer lock queda disponible como modo opcional para giros ilimitados; LMB rompe y RMB coloca en ambos modos.
@@ -48,7 +48,7 @@ El mundo mide 48×32×48 y contiene 18 chunks de 16³. Se generan todos antes de
 
 ## Tuning para AI
 
-`CONFIG.environment` concentra los presets `day/night`, modo inicial, visibilidad del botón temporal, estrellas, nubes, lagos, densidades de costa, partículas y audio. Para arrancar siempre de noche basta cambiar `environment.sky.initialMode` a `night`; el botón se retira con `showToggleButton: false` sin borrar el sistema. Las recetas plug-and-play están en [`docs/environment-config.md`](docs/environment-config.md).
+`CONFIG.environment` concentra los presets `day/night`, modo inicial, visibilidad del selector opcional, estrellas, nubes, lagos, densidades de costa, partículas y audio. El selector está oculto por defecto; para arrancar siempre de noche basta cambiar `environment.sky.initialMode` a `night`. Una AI puede reactivar la UI con `showToggleButton: true` sin crear otro sistema. Las recetas plug-and-play están en [`docs/environment-config.md`](docs/environment-config.md).
 
 ## Asset CC0
 

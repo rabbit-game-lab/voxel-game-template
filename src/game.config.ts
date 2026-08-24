@@ -65,7 +65,7 @@ export const CONFIG = {
   environment: {
     sky: {
       initialMode: 'day',
-      showToggleButton: true,
+      showToggleButton: false,
       presets: {
         day: {
           zenith: '#74b9e8', horizon: '#c9e5dc', ambient: '#526963',
