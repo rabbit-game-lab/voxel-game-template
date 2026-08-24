@@ -4,7 +4,7 @@ import type { RayHit } from '../voxel/raycast'
 
 export type GamePhase = 'focus' | 'playing' | 'victory' | 'defeat'
 export type InputDevice = 'keyboard' | 'touch' | 'gamepad'
-export type SoundType = 'jump' | 'break' | 'place' | 'crystal' | 'invalid' | 'victory' | 'defeat'
+export type SoundType = 'jump' | 'splash' | 'break' | 'place' | 'crystal' | 'invalid' | 'victory' | 'defeat'
 
 export interface InputSnapshot {
   moveX: number
@@ -37,6 +37,7 @@ export interface PlayerState {
   yaw: number
   pitch: number
   grounded: boolean
+  inWater: boolean
   coyoteRemaining: number
 }
 

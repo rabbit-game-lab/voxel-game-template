@@ -4,12 +4,14 @@ import { makeMat } from './helpers'
 import type { GameConfig } from '../game.config'
 import type { ChunkCoord, VoxelCoord } from '../voxel/coords'
 import { chunkKey } from '../voxel/coords'
-import { buildChunkMesh } from '../voxel/mesher'
+import { buildChunkMesh, buildLiquidChunkMesh } from '../voxel/mesher'
 import type { VoxelWorld } from '../voxel/world'
 
 interface ChunkRender {
   entity: pc.Entity
-  mesh: pc.Mesh
+  opaqueMesh: pc.Mesh
+  liquidMesh: pc.Mesh
+  liquidInstance: pc.MeshInstance
 }
 
 export interface WorldViewHandle {
@@ -18,28 +20,52 @@ export interface WorldViewHandle {
   update(): void
   setSelection(voxel: VoxelCoord | null): void
   setSockets(occupied: readonly boolean[]): void
-  stats(): { chunks: number; faces: number; triangles: number; drawCalls: number; maxRemeshMs: number }
+  stats(): {
+    chunks: number; faces: number; liquidFaces: number; triangles: number
+    drawCalls: number; waterDrawCalls: number; maxRemeshMs: number
+  }
   destroy(): void
 }
 
-function upload(mesh: pc.Mesh, world: VoxelWorld, coord: ChunkCoord, config: GameConfig): number {
+function emptyMesh(mesh: pc.Mesh, withUvs: boolean): void {
+  mesh.clear(true, true, 3, 3)
+  mesh.setPositions(new Float32Array(9))
+  mesh.setNormals(new Float32Array(9))
+  if (withUvs) mesh.setUvs(0, new Float32Array(6))
+  mesh.setColors32(new Uint8Array(12))
+  mesh.setIndices(new Uint16Array([0, 1, 2]))
+  mesh.update(pc.PRIMITIVE_TRIANGLES)
+}
+
+function uploadOpaque(mesh: pc.Mesh, world: VoxelWorld, coord: ChunkCoord, config: GameConfig): number {
   const chunk = world.allChunks().find((item) => chunkKey(item.coord) === chunkKey(coord))
   if (!chunk) return 0
   const data = buildChunkMesh(world, chunk, config)
   if (data.positions.length === 0) {
-    mesh.clear(true, true, 3, 3)
-    mesh.setPositions(new Float32Array(9))
-    mesh.setNormals(new Float32Array(9))
-    mesh.setUvs(0, new Float32Array(6))
-    mesh.setColors32(new Uint8Array(12))
-    mesh.setIndices(new Uint16Array([0, 1, 2]))
-    mesh.update(pc.PRIMITIVE_TRIANGLES)
+    emptyMesh(mesh, true)
     return 0
   }
   mesh.clear(true, true, data.positions.length / 3, data.indices.length)
   mesh.setPositions(data.positions)
   mesh.setNormals(data.normals)
   mesh.setUvs(0, data.uvs)
+  mesh.setColors32(data.colors)
+  mesh.setIndices(data.indices)
+  mesh.update(pc.PRIMITIVE_TRIANGLES)
+  return data.faces
+}
+
+function uploadLiquid(mesh: pc.Mesh, world: VoxelWorld, coord: ChunkCoord, config: GameConfig): number {
+  const chunk = world.allChunks().find((item) => chunkKey(item.coord) === chunkKey(coord))
+  if (!chunk) return 0
+  const data = buildLiquidChunkMesh(world, chunk, config)
+  if (data.positions.length === 0) {
+    emptyMesh(mesh, false)
+    return 0
+  }
+  mesh.clear(true, true, data.positions.length / 3, data.indices.length)
+  mesh.setPositions(data.positions)
+  mesh.setNormals(data.normals)
   mesh.setColors32(data.colors)
   mesh.setIndices(data.indices)
   mesh.update(pc.PRIMITIVE_TRIANGLES)
@@ -72,8 +98,20 @@ export function createWorldView(
   material.metalness = 0
   material.update()
 
+  const liquidMaterial = new pc.StandardMaterial()
+  liquidMaterial.useLighting = false
+  liquidMaterial.diffuse.set(0, 0, 0)
+  liquidMaterial.emissive.set(1, 1, 1)
+  liquidMaterial.emissiveVertexColor = true
+  liquidMaterial.opacity = config.environment.water.opacity
+  liquidMaterial.blendType = pc.BLEND_NORMAL
+  liquidMaterial.depthWrite = false
+  liquidMaterial.gloss = 0
+  liquidMaterial.cull = pc.CULLFACE_NONE
+  liquidMaterial.update()
+
   const chunkRenders = new Map<string, ChunkRender>()
-  const faceCounts = new Map<string, number>()
+  const faceCounts = new Map<string, { opaque: number; liquid: number }>()
   const dirty = new Map<string, ChunkCoord>()
   let maxRemeshMs = 0
 
@@ -81,15 +119,22 @@ export function createWorldView(
     const entity = new pc.Entity(`Chunk ${chunkKey(chunk.coord)}`)
     const origin = world.chunkOrigin(chunk.coord)
     entity.setLocalPosition(origin.x, origin.y, origin.z)
-    const mesh = new pc.Mesh(app.graphicsDevice)
-    faceCounts.set(chunkKey(chunk.coord), upload(mesh, world, chunk.coord, config))
-    const meshInstance = new pc.MeshInstance(mesh, material)
-    meshInstance.castShadow = false
-    meshInstance.receiveShadow = false
+    const opaqueMesh = new pc.Mesh(app.graphicsDevice)
+    const liquidMesh = new pc.Mesh(app.graphicsDevice)
+    const opaqueFaces = uploadOpaque(opaqueMesh, world, chunk.coord, config)
+    const liquidFaces = uploadLiquid(liquidMesh, world, chunk.coord, config)
+    faceCounts.set(chunkKey(chunk.coord), { opaque: opaqueFaces, liquid: liquidFaces })
+    const opaqueInstance = new pc.MeshInstance(opaqueMesh, material)
+    opaqueInstance.castShadow = false
+    opaqueInstance.receiveShadow = false
+    const liquidInstance = new pc.MeshInstance(liquidMesh, liquidMaterial)
+    liquidInstance.castShadow = false
+    liquidInstance.receiveShadow = false
+    liquidInstance.visible = liquidFaces > 0
     entity.addComponent('render')
-    entity.render!.meshInstances = [meshInstance]
+    entity.render!.meshInstances = [opaqueInstance, liquidInstance]
     root.addChild(entity)
-    chunkRenders.set(chunkKey(chunk.coord), { entity, mesh })
+    chunkRenders.set(chunkKey(chunk.coord), { entity, opaqueMesh, liquidMesh, liquidInstance })
   }
 
   const selectionMaterial = makeMat(config.visual.selection, {
@@ -120,7 +165,10 @@ export function createWorldView(
     const render = chunkRenders.get(chunkKey(coord))
     if (!render) return
     const start = performance.now()
-    faceCounts.set(chunkKey(coord), upload(render.mesh, world, coord, config))
+    const opaque = uploadOpaque(render.opaqueMesh, world, coord, config)
+    const liquid = uploadLiquid(render.liquidMesh, world, coord, config)
+    render.liquidInstance.visible = liquid > 0
+    faceCounts.set(chunkKey(coord), { opaque, liquid })
     maxRemeshMs = Math.max(maxRemeshMs, performance.now() - start)
   }
 
@@ -149,15 +197,23 @@ export function createWorldView(
       socketMarkers.forEach((marker, index) => { marker.enabled = !occupied[index] })
     },
     stats() {
-      const faces = [...faceCounts.values()].reduce((sum, value) => sum + value, 0)
-      return { chunks: chunkRenders.size, faces, triangles: faces * 2, drawCalls: chunkRenders.size, maxRemeshMs }
+      const opaqueFaces = [...faceCounts.values()].reduce((sum, value) => sum + value.opaque, 0)
+      const liquidFaces = [...faceCounts.values()].reduce((sum, value) => sum + value.liquid, 0)
+      const waterDrawCalls = [...faceCounts.values()].filter((value) => value.liquid > 0).length
+      const faces = opaqueFaces + liquidFaces
+      return {
+        chunks: chunkRenders.size, faces, liquidFaces, triangles: faces * 2,
+        drawCalls: chunkRenders.size + waterDrawCalls, waterDrawCalls, maxRemeshMs,
+      }
     },
     destroy() {
       root.destroy()
-      material.destroy()
+      material.destroy(); liquidMaterial.destroy()
       selectionMaterial.destroy()
       socketMaterials.forEach((item) => item.destroy())
-      for (const render of chunkRenders.values()) render.mesh.destroy()
+      for (const render of chunkRenders.values()) {
+        render.opaqueMesh.destroy(); render.liquidMesh.destroy()
+      }
       dirty.clear(); chunkRenders.clear(); faceCounts.clear()
     },
   }

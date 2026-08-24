@@ -1,4 +1,6 @@
 import { BLOCKS } from '../data/blocks'
+import { lakeSignedDistance } from '../environment/lakes'
+import type { LakeConfig } from '../environment/config'
 import type { GameConfig } from '../game.config'
 import { VoxelWorld } from './world'
 
@@ -73,6 +75,21 @@ function addTree(world: VoxelWorld, x: number, z: number): void {
   }
 }
 
+function carveLake(world: VoxelWorld, lake: LakeConfig, config: GameConfig): void {
+  const radiusX = Math.ceil(lake.radius[0] + lake.shoreWidth)
+  const radiusZ = Math.ceil(lake.radius[1] + lake.shoreWidth)
+  for (let z = lake.center[2] - radiusZ; z <= lake.center[2] + radiusZ; z += 1) {
+    for (let x = lake.center[0] - radiusX; x <= lake.center[0] + radiusX; x += 1) {
+      const distance = lakeSignedDistance(lake, x, z, config.world.seed)
+      if (distance > lake.shoreWidth) continue
+      const shore = lake.shoreWidth <= 0 ? 0 : Math.max(0, distance) / lake.shoreWidth
+      const top = lake.center[1] - 1 + Math.ceil(shore * 2)
+      fillColumn(world, x, z, top)
+      if (distance <= 0) world.setBlock(x, lake.center[1], z, BLOCKS.water.id)
+    }
+  }
+}
+
 export function generateWorld(world: VoxelWorld, config: GameConfig): void {
   world.reset()
   const { min, maxExclusive } = world.bounds
@@ -80,6 +97,10 @@ export function generateWorld(world: VoxelWorld, config: GameConfig): void {
     for (let x = min.x; x < maxExclusive.x; x += 1) {
       fillColumn(world, x, z, terrainHeight(x, z, config))
     }
+  }
+
+  if (config.environment.water.enabled) {
+    for (const lake of config.environment.water.lakes) carveLake(world, lake, config)
   }
 
   const plateau = config.world.plateauCenter
@@ -102,4 +123,3 @@ export function generateWorld(world: VoxelWorld, config: GameConfig): void {
   }
   for (const tree of config.world.trees) addTree(world, tree[0], tree[1])
 }
-

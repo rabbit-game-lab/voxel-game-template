@@ -1,4 +1,4 @@
-import { BLOCKS, type BlockId } from '../data/blocks'
+import { BLOCKS, blockById, type BlockId } from '../data/blocks'
 import { CHUNK_SIZE } from './constants'
 import { VoxelChunk } from './chunk'
 import {
@@ -85,7 +85,7 @@ export class VoxelWorld {
 
   highestSolidY(x: number, z: number): number | null {
     for (let y = this.bounds.maxExclusive.y - 1; y >= this.bounds.min.y; y -= 1) {
-      if (this.getBlock(x, y, z) !== BLOCKS.air.id) return y
+      if (blockById(this.getBlock(x, y, z)).solid) return y
     }
     return null
   }
@@ -118,4 +118,3 @@ export class VoxelWorld {
     return result
   }
 }
-

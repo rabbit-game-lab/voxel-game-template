@@ -2,6 +2,7 @@ import * as pc from 'playcanvas'
 import { ASSETS } from '../data/assets'
 import { BLOCKS } from '../data/blocks'
 import { createEffects, type EffectsHandle } from '../entities/effects'
+import { createEnvironment, type EnvironmentHandle } from '../entities/environment'
 import { createScene, type SceneHandle } from '../entities/scene'
 import { createWorldView, type WorldViewHandle } from '../entities/world-view'
 import { CONFIG } from '../game.config'
@@ -29,6 +30,7 @@ interface Runtime {
   scene: SceneHandle
   view: WorldViewHandle
   effects: EffectsHandle
+  environment: EnvironmentHandle
   input: InputHandle
   audio: AudioHandle
   pause: PauseHandle
@@ -72,6 +74,7 @@ export function setupGame(app: pc.Application): GameHandle {
     current.session.restart()
     current.view.rebuildAll()
     current.effects.reset()
+    current.environment.reset()
     current.audio.reset()
     current.input.clear()
     current.input.releaseFocus()
@@ -167,7 +170,11 @@ export function setupGame(app: pc.Application): GameHandle {
       if (steps === CONFIG.performance.maxCatchupSteps) accumulator %= FIXED_STEP
       processEvents(current)
       current.view.update()
-      if (current.session.phase === 'playing') current.effects.update(frameDt)
+      current.environment.update(frameDt, current.session.player)
+      if (current.session.phase === 'playing') {
+        current.effects.update(frameDt)
+        current.audio.update(frameDt)
+      }
     }
     current.scene.updatePlayer(current.session.player)
     updatePresentation(current)
@@ -184,27 +191,29 @@ export function setupGame(app: pc.Application): GameHandle {
       const scene = createScene(app, CONFIG)
       const view = createWorldView(app, session.world, assets, CONFIG)
       const effects = createEffects(app, CONFIG)
+      const environment = createEnvironment(app, scene.camera, session.world, CONFIG)
       const input = createInput(canvas, CONFIG)
       const audio = createGameAudio(CONFIG)
       audio.setMuted(muted)
       const pause = createPause({
         keys: ['Escape', 'KeyP'], overlay: false, pauseOnBlur: false,
-        inputs: [input, audio],
+        inputs: [input, audio, environment],
         onChange(paused) {
           app.timeScale = paused ? 0 : 1
           if (paused) {
             bufferedJump = false; bufferedPlace = false; bufferedBreak = false
             input.releaseFocus()
           }
-          updatePresentation({ session, assets: assets!, scene, view, effects, input, audio, pause })
+          updatePresentation({ session, assets: assets!, scene, view, effects, environment, input, audio, pause })
         },
       })
-      runtime = { session, assets, scene, view, effects, input, audio, pause }
+      runtime = { session, assets, scene, view, effects, environment, input, audio, pause }
       scene.updatePlayer(session.player)
       app.on('update', update)
       updatePresentation(runtime)
       const stats = view.stats()
-      console.info(`[Rabbit Voxel Lab] ${stats.chunks} chunks, ${stats.drawCalls} terrain draw calls, ${stats.triangles} triangles, max boot remesh ${stats.maxRemeshMs.toFixed(1)} ms`)
+      const environmentStats = environment.stats()
+      console.info(`[Rabbit Voxel Lab] ${stats.chunks} chunks, ${stats.drawCalls} terrain draw calls (${stats.waterDrawCalls} water), ${environmentStats.drawCalls} environment draw calls (${environmentStats.clouds} clouds, ${environmentStats.reeds} reeds, ${environmentStats.rocks} rocks, ${environmentStats.particles} particles), ${stats.triangles} triangles, max boot remesh ${stats.maxRemeshMs.toFixed(1)} ms`)
       resolveReady()
     } catch (error) {
       assets?.destroy()
@@ -231,7 +240,8 @@ export function setupGame(app: pc.Application): GameHandle {
       runtime = null
       if (current) {
         current.pause.destroy(); current.input.destroy(); current.audio.destroy()
-        current.effects.destroy(); current.view.destroy(); current.scene.destroy(); current.assets.destroy()
+        current.effects.destroy(); current.environment.destroy(); current.view.destroy()
+        current.scene.destroy(); current.assets.destroy()
       }
       hud.destroy()
     },

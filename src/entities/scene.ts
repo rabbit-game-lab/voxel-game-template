@@ -12,16 +12,17 @@ export interface SceneHandle {
 export function createScene(app: pc.Application, config: GameConfig): SceneHandle {
   const root = new pc.Entity('Voxel Scene')
   app.root.addChild(root)
+  const sky = config.environment.sky
 
-  app.scene.ambientLight = color(config.visual.ambient)
+  app.scene.ambientLight = color(sky.ambient)
   app.scene.fog.type = pc.FOG_LINEAR
-  app.scene.fog.color.copy(color(config.visual.fogColor))
-  app.scene.fog.start = config.visual.fogStart
-  app.scene.fog.end = config.visual.fogEnd
+  app.scene.fog.color.copy(color(sky.fogColor))
+  app.scene.fog.start = sky.fogStart
+  app.scene.fog.end = sky.fogEnd
 
   const camera = new pc.Entity('FPS Camera')
   camera.addComponent('camera', {
-    clearColor: color(config.visual.sky),
+    clearColor: color(sky.horizon),
     fov: config.camera.fov,
     nearClip: config.camera.nearClip,
     farClip: config.camera.farClip,
@@ -30,10 +31,10 @@ export function createScene(app: pc.Application, config: GameConfig): SceneHandl
 
   const sun = new pc.Entity('Warm Sun')
   sun.addComponent('light', {
-    type: 'directional', color: color(config.visual.sun), intensity: 0.88,
+    type: 'directional', color: color(sky.sunColor), intensity: 0.88,
     castShadows: false,
   })
-  sun.setLocalEulerAngles(48, -32, 0)
+  sun.setLocalEulerAngles(...sky.sunEuler)
   root.addChild(sun)
 
   return {

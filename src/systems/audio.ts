@@ -4,6 +4,7 @@ import type { SoundType } from '../sim/types'
 
 export interface AudioHandle {
   play(type: SoundType): void
+  update(dt: number): void
   setPaused(paused: boolean): void
   setMuted(muted: boolean): void
   reset(): void
@@ -14,6 +15,15 @@ export function createGameAudio(config: GameConfig): AudioHandle {
   const sound = createSound({ volumes: { sfx: config.audio.sfxVolume, music: config.audio.musicVolume } })
   let paused = false
   let muted = false
+  let randomState = (config.world.seed + 92821) >>> 0
+  let waterTimer = 2.5
+  let windTimer = 5
+
+  const random = (): number => {
+    randomState = Math.imul(randomState ^ (randomState >>> 15), randomState | 1) >>> 0
+    return randomState / 0xffffffff
+  }
+  const interval = (range: readonly [number, number]): number => range[0] + random() * (range[1] - range[0])
 
   return {
     play(type) {
@@ -21,6 +31,9 @@ export function createGameAudio(config: GameConfig): AudioHandle {
       switch (type) {
         case 'jump':
           sound.tone({ freq: 260, slideTo: 520, duration: 0.08, volume: 0.028 })
+          break
+        case 'splash':
+          sound.noise({ duration: 0.2, filter: 'lowpass', freq: 720, freqTo: 180, volume: 0.045 })
           break
         case 'break':
           sound.noise({ duration: 0.11, filter: 'lowpass', freq: 950, freqTo: 280, volume: 0.055 })
@@ -45,6 +58,24 @@ export function createGameAudio(config: GameConfig): AudioHandle {
           break
       }
     },
+    update(dt) {
+      if (paused || muted || !config.environment.ambience.enabled) return
+      waterTimer -= dt; windTimer -= dt
+      if (waterTimer <= 0) {
+        sound.noise({
+          duration: 0.32, filter: 'lowpass', freq: 460, freqTo: 210,
+          volume: config.environment.ambience.volume * 0.72,
+        })
+        waterTimer = interval(config.environment.ambience.waterInterval)
+      }
+      if (windTimer <= 0) {
+        sound.noise({
+          duration: 0.42, filter: 'bandpass', freq: 680, freqTo: 340, q: 0.5,
+          volume: config.environment.ambience.volume * 0.52,
+        })
+        windTimer = interval(config.environment.ambience.windInterval)
+      }
+    },
     setPaused(value) {
       paused = value
       if (value) sound.stop('sfx')
@@ -53,7 +84,11 @@ export function createGameAudio(config: GameConfig): AudioHandle {
       muted = value
       sound.setMuted(value)
     },
-    reset() { sound.stop('sfx') },
+    reset() {
+      sound.stop('sfx')
+      randomState = (config.world.seed + 92821) >>> 0
+      waterTimer = 2.5; windTimer = 5
+    },
     destroy() { sound.destroy() },
   }
 }

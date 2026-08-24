@@ -4,6 +4,8 @@
 
 Template 3D FPS de construcción por bloques para Rabbit Game Lab, construido con PlayCanvas, Vite y TypeScript estricto. El primer objetivo jugable es recuperar tres cristales expuestos y colocarlos en los sockets luminosos del faro.
 
+La isla incluye un ambiente natural enteramente procedural: cielo con gradiente y sol, dos capas de nubes voxel, un lago orgánico transitable, costa con juncos y piedras, partículas y audio suave de viento/agua. No requiere assets ambientales ni dependencias adicionales.
+
 ## Ejecutar
 
 Requiere Node.js 24 o posterior.
@@ -36,12 +38,17 @@ Sin pointer lock, mover el cursor sobre el canvas rota la cámara sin mantener n
 - `src/game.config.ts`: única superficie pública de tuning.
 - `src/data/blocks.ts`: registro de bloques e IDs estables.
 - `src/voxel/`: `Uint8Array` por chunk, generación determinista, DDA y face-culling.
+- `src/environment/`: contrato tipado y reglas deterministas de lagos.
 - `src/sim/`: jugador cinemático y reglas sin dependencias de PlayCanvas.
-- `src/entities/`: escena, una malla por chunk, selección y efectos.
+- `src/entities/`: escena, mallas opaca/líquida por chunk, ambiente, selección y efectos.
 - `src/systems/`: composición, input normalizado, HUD, audio y lifecycle Rabbit.
 - `src/rabbit/`: contrato de plataforma protegido.
 
-El mundo mide 48×32×48 y contiene 18 chunks de 16³. Se generan todos antes de `ready`; las ediciones reconstruyen como máximo dos chunks por frame y también invalidan el vecino cuando tocan un borde.
+El mundo mide 48×32×48 y contiene 18 chunks de 16³. Se generan todos antes de `ready`; las ediciones reconstruyen como máximo dos chunks por frame y también invalidan el vecino cuando tocan un borde. El agua usa una capa transparente compartida: no tiene física de fluidos, no bloquea el DDA y se restaura de forma determinista cuando se rompe un bloque colocado dentro del lago.
+
+## Tuning para AI
+
+`CONFIG.environment` concentra colores de cielo, niebla y sol, capas de nubes, lagos, densidades de costa, partículas y audio. Para mover un lago, crear un preset o desactivar una feature no hace falta tocar el game loop. Las recetas plug-and-play están en [`docs/environment-config.md`](docs/environment-config.md).
 
 ## Asset CC0
 
@@ -51,4 +58,4 @@ Una extensión futura con props del pack debe seguir este flujo: seleccionar só
 
 ## Alcance deliberado
 
-No hay mundo infinito, streaming, greedy meshing, crafting, enemigos, líquidos, iluminación voxel, backend, guardado ni multiplayer. Restart y recarga vuelven a generar la seed `1337`. Greedy meshing se evaluará únicamente si mediciones en dispositivos objetivo demuestran que el face-culling actual no alcanza.
+No hay mundo infinito, streaming, greedy meshing, crafting, enemigos, natación, simulación de fluidos, iluminación voxel, backend, guardado ni multiplayer. Restart y recarga vuelven a generar la seed `1337`. Greedy meshing se evaluará únicamente si mediciones en dispositivos objetivo demuestran que el face-culling actual no alcanza.

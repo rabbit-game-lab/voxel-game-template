@@ -1,4 +1,4 @@
-import { BLOCKS } from '../data/blocks'
+import { blockById } from '../data/blocks'
 import type { VoxelCoord } from './coords'
 import type { VoxelWorld } from './world'
 
@@ -36,7 +36,7 @@ export function raycastVoxels(
   let normal = { x: 0, y: 0, z: 0 }
 
   while (distance <= maxDistance) {
-    if (world.getBlock(x, y, z) !== BLOCKS.air.id) {
+    if (blockById(world.getBlock(x, y, z)).raycastable) {
       return {
         voxel: { x, y, z },
         adjacent: { x: x + normal.x, y: y + normal.y, z: z + normal.z },
@@ -57,4 +57,3 @@ export function raycastVoxels(
   }
   return null
 }
-

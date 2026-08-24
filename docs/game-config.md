@@ -25,10 +25,22 @@
 - La seed controla el value noise determinista. Landmarks se aplican después del terreno.
 - `startingInventory` sólo acepta block keys del registro y enteros no negativos.
 
+## Ambiente
+
+- `environment.sky` coordina domo, luz, clear color y niebla; `fogStart` debe ser menor que `fogEnd`.
+- `environment.clouds.layers` admite hasta 16 nubes en total. Cada capa define cantidad, altitud, velocidad y rango de escala.
+- `environment.water.lakes` admite múltiples lagos deterministas. El centro usa `[x, yDelBloqueDeAgua, z]`; radios y costa deben caber completamente dentro del mundo y no superponer spawn, faro o cristales.
+- `surfaceInset` desplaza la cara superior dentro del bloque para evitar z-fighting. `wadeSpeedMultiplier` sólo afecta velocidad horizontal con agua en los pies.
+- Juncos, piedras y partículas son visuales: no tienen colisión ni participan del raycast.
+- Límites: 16 nubes, 64 juncos, 32 piedras y 24 partículas.
+- `environment.ambience` controla ráfagas procedurales; los intervalos son rangos `[mínimo, máximo]` en segundos.
+
+Las recetas de edición segura y presets están en [`environment-config.md`](environment-config.md).
+
 ## Visual, audio y rendimiento
 
 - Colores son strings CSS hex aceptados por PlayCanvas.
-- `fogStart` debe quedar por debajo de `fogEnd`.
+- `visual` conserva sólo tintes de caras, selección y sockets; cielo, luz y niebla viven en `environment.sky`.
 - Volúmenes pertenecen a `[0, 1]`.
 - `maxChunkRebuildsPerFrame` limita picos por edición; el boot siempre construye los 18 chunks.
 - `fragmentPoolSize` es fijo y no crece durante la sesión.

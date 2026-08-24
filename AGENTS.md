@@ -9,10 +9,13 @@ Do not edit `src/rabbit/`, `scripts/check.mjs`, `rabbit.json`, or the dependency
 - `src/game.config.ts` is the only gameplay tuning surface.
 - `src/data/blocks.ts` owns stable block IDs. Never reorder or reuse IDs.
 - `src/voxel/` owns coordinates, chunks, generation, DDA and meshing.
+- `src/environment/` owns typed environment contracts and deterministic lake rules.
 - `src/sim/` is engine-independent gameplay and fixed-step player simulation.
-- `src/entities/` owns PlayCanvas rendering only.
+- `src/entities/environment.ts` owns modular PlayCanvas environment factories; add features there without coupling them to the game loop.
+- `src/entities/world-view.ts` owns both opaque and liquid chunk meshes.
 - `src/systems/loop.ts` is the composition root and Rabbit lifecycle owner.
 - Keep every `src/` file below 400 lines; split near 250–300 lines.
+- Keep all public environment tuning in `CONFIG.environment`; algorithms, render resources and lifecycle remain internal.
 
 ## Required gates
 

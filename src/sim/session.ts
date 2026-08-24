@@ -3,6 +3,7 @@ import {
   type BlockKey, type HotbarBlockKey,
 } from '../data/blocks'
 import type { GameConfig } from '../game.config'
+import { naturalReplacementAt } from '../environment/lakes'
 import type { VoxelCoord } from '../voxel/coords'
 import { generateWorld } from '../voxel/generator'
 import { raycastVoxels } from '../voxel/raycast'
@@ -73,9 +74,9 @@ export class GameSession {
     if (this.phase !== 'playing') return
     this.breakCooldown = Math.max(0, this.breakCooldown - dt)
     this.placeCooldown = Math.max(0, this.placeCooldown - dt)
-    if (stepPlayer(this.world, this.player, input, dt, this.config)) {
-      this.events.push({ type: 'sound', sound: 'jump' })
-    }
+    const movement = stepPlayer(this.world, this.player, input, dt, this.config)
+    if (movement.jumped) this.events.push({ type: 'sound', sound: 'jump' })
+    if (movement.enteredWater) this.events.push({ type: 'sound', sound: 'splash' })
     if (this.player.position.y < this.config.session.defeatY) {
       this.end('defeat')
       return
@@ -135,7 +136,8 @@ export class GameSession {
       this.events.push({ type: 'sound', sound: 'invalid' })
       return
     }
-    const edit = this.world.setBlock(hit.voxel.x, hit.voxel.y, hit.voxel.z, BLOCKS.air.id)
+    const replacement = naturalReplacementAt(this.config, hit.voxel.x, hit.voxel.y, hit.voxel.z)
+    const edit = this.world.setBlock(hit.voxel.x, hit.voxel.y, hit.voxel.z, replacement)
     if (!edit.changed) return
     this.inventory[spec.drop] += 1
     this.events.push({ type: 'sound', sound: spec.drop === 'crystal' ? 'crystal' : 'break' })
@@ -148,16 +150,17 @@ export class GameSession {
     const hit = this.target.hit
     const key = this.selectedBlock()
     const spec = BLOCKS[key]
+    const replaced = hit ? this.world.getBlock(hit.adjacent.x, hit.adjacent.y, hit.adjacent.z) : BLOCKS.air.id
     if (!hit || !spec.placeable || this.inventory[key] <= 0 ||
         !this.world.contains(hit.adjacent.x, hit.adjacent.y, hit.adjacent.z) ||
-        this.world.getBlock(hit.adjacent.x, hit.adjacent.y, hit.adjacent.z) !== BLOCKS.air.id ||
+        !blockById(replaced).replaceable ||
         playerIntersectsVoxel(this.player, hit.adjacent, this.config)) {
       this.events.push({ type: 'sound', sound: 'invalid' })
       return
     }
     const edit = this.world.setBlock(hit.adjacent.x, hit.adjacent.y, hit.adjacent.z, blockId(key))
     if (!edit.changed || collidesAt(this.world, this.player.position, this.config)) {
-      if (edit.changed) this.world.setBlock(hit.adjacent.x, hit.adjacent.y, hit.adjacent.z, BLOCKS.air.id)
+      if (edit.changed) this.world.setBlock(hit.adjacent.x, hit.adjacent.y, hit.adjacent.z, replaced)
       this.events.push({ type: 'sound', sound: 'invalid' })
       return
     }

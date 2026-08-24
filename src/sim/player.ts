@@ -18,8 +18,24 @@ export function createPlayer(config: GameConfig): PlayerState {
     yaw: 0,
     pitch: 0,
     grounded: false,
+    inWater: false,
     coyoteRemaining: 0,
   }
+}
+
+function liquidAtBody(world: VoxelWorld, position: VoxelCoord, config: GameConfig): boolean {
+  const half = config.player.bodyWidth * 0.5
+  const y = Math.floor(position.y + 0.24)
+  const minX = Math.floor(position.x - half + COLLISION_EPSILON)
+  const maxX = Math.floor(position.x + half - COLLISION_EPSILON)
+  const minZ = Math.floor(position.z - half + COLLISION_EPSILON)
+  const maxZ = Math.floor(position.z + half - COLLISION_EPSILON)
+  for (let z = minZ; z <= maxZ; z += 1) {
+    for (let x = minX; x <= maxX; x += 1) {
+      if (blockById(world.getBlock(x, y, z)).renderLayer === 'liquid') return true
+    }
+  }
+  return false
 }
 
 export function collidesAt(world: VoxelWorld, position: VoxelCoord, config: GameConfig): boolean {
@@ -70,20 +86,28 @@ function moveAxis(
   return true
 }
 
+export interface PlayerStepResult {
+  jumped: boolean
+  enteredWater: boolean
+}
+
 export function stepPlayer(
   world: VoxelWorld,
   player: PlayerState,
   input: SimInput,
   dt: number,
   config: GameConfig,
-): boolean {
+): PlayerStepResult {
+  const wasInWater = player.inWater
+  player.inWater = liquidAtBody(world, player.position, config)
   const magnitude = Math.hypot(input.moveX, input.moveZ)
   const moveX = magnitude > 1 ? input.moveX / magnitude : input.moveX
   const moveZ = magnitude > 1 ? input.moveZ / magnitude : input.moveZ
   const yaw = player.yaw * Math.PI / 180
   const desiredX = Math.cos(yaw) * moveX - Math.sin(yaw) * moveZ
   const desiredZ = -Math.sin(yaw) * moveX - Math.cos(yaw) * moveZ
-  const speed = config.player.moveSpeed * (input.sprint ? config.player.sprintMultiplier : 1)
+  const waterScale = player.inWater ? config.environment.water.wadeSpeedMultiplier : 1
+  const speed = config.player.moveSpeed * (input.sprint ? config.player.sprintMultiplier : 1) * waterScale
   const control = player.grounded ? 1 : config.player.airControl
   const rate = magnitude > 0 ? config.player.acceleration * control : config.player.friction * control
   player.velocity.x = moveToward(player.velocity.x, desiredX * speed, rate * dt)
@@ -105,7 +129,8 @@ export function stepPlayer(
   const verticalCollision = moveAxis(world, player, config, 'y', player.velocity.y * dt)
   player.grounded = verticalCollision && player.velocity.y < 0
   if (verticalCollision) player.velocity.y = 0
-  return jumped
+  player.inWater = liquidAtBody(world, player.position, config)
+  return { jumped, enteredWater: !wasInWater && player.inWater }
 }
 
 export function viewDirection(player: PlayerState): VoxelCoord {
@@ -118,4 +143,3 @@ export function viewDirection(player: PlayerState): VoxelCoord {
     z: -Math.cos(yaw) * horizontal,
   }
 }
-
