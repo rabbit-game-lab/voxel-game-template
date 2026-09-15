@@ -1,7 +1,7 @@
 import type { GameConfig } from '../game.config'
 import { createGamepad } from '../rabbit/gamepad'
 import { createKeyboard } from '../rabbit/keyboard'
-import { createPointerLock } from '../rabbit/pointer-lock'
+import { createPointerLock } from './pointer-lock'
 import { createTouch } from '../rabbit/touch'
 import type { InputDevice, InputSnapshot } from '../sim/types'
 
