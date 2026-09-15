@@ -15,6 +15,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { profileFailures } from './profile.mjs'
 
 const root = process.cwd()
 const failures = []
@@ -22,9 +23,13 @@ const failures = []
 const warnings = []
 
 // --- 1. Layout ---
+let manifest = null
 let stack = null
+let manifestSource = null
 try {
-  stack = JSON.parse(readFileSync(join(root, 'rabbit.json'), 'utf8')).stack ?? null
+  manifestSource = readFileSync(join(root, 'rabbit.json'), 'utf8')
+  manifest = JSON.parse(manifestSource)
+  stack = manifest.stack ?? null
 } catch {
   // rabbit.json problems are reported below.
 }
@@ -33,6 +38,8 @@ const STACK_FILES = {
   'phaser-2d': ['src/scenes/index.ts'],
   'playcanvas-3d': ['src/systems/loop.ts'],
 }
+const SUPPORTED_STACKS = new Set(Object.keys(STACK_FILES))
+const EMBED_CAPABILITIES = ['audio', 'pointerLock', 'storage']
 
 const requiredFiles = [
   'rabbit.json',
@@ -51,14 +58,25 @@ for (const file of requiredFiles) {
 }
 
 try {
-  const manifest = JSON.parse(readFileSync(join(root, 'rabbit.json'), 'utf8'))
+  manifest ??= JSON.parse(readFileSync(join(root, 'rabbit.json'), 'utf8'))
   if (manifest.contract !== 1) failures.push('rabbit.json: "contract" must be 1')
-  if (typeof manifest.stack !== 'string' || manifest.stack.length === 0) {
-    failures.push('rabbit.json: missing "stack"')
+  if (!SUPPORTED_STACKS.has(manifest.stack)) {
+    failures.push(`rabbit.json: "stack" must be one of ${[...SUPPORTED_STACKS].join(', ')}`)
   }
   if (typeof manifest.embed !== 'object' || manifest.embed === null) {
     failures.push('rabbit.json: missing "embed"')
+  } else {
+    for (const capability of EMBED_CAPABILITIES) {
+      if (typeof manifest.embed[capability] !== 'boolean') {
+        failures.push(`rabbit.json: "embed.${capability}" must be boolean`)
+      }
+    }
   }
+  failures.push(...profileFailures({
+    root,
+    manifest,
+    manifestBytes: Buffer.byteLength(manifestSource ?? '', 'utf8'),
+  }).map((failure) => `rabbit.json: ${failure}`))
 } catch (error) {
   failures.push(`rabbit.json: invalid (${error.message})`)
 }
@@ -139,7 +157,9 @@ const FORBIDDEN = [
   { pattern: /\blocalStorage\b/, reason: 'use sdk.storage instead of localStorage' },
   { pattern: /\bsessionStorage\b/, reason: 'use sdk.storage instead of sessionStorage' },
   { pattern: /requestFullscreen/, reason: 'fullscreen is not declared in rabbit.json.embed' },
-  { pattern: /requestPointerLock/, reason: 'pointerLock is not declared in rabbit.json.embed' },
+  ...(manifest?.embed?.pointerLock === true
+    ? []
+    : [{ pattern: /requestPointerLock/, reason: 'pointerLock is not declared in rabbit.json.embed' }]),
   { pattern: /\bcreateScript\s*\(/, reason: 'Editor v1 style is forbidden: use ESM classes (extends Script)' },
 ]
 const MAX_LINES = 400
@@ -148,7 +168,7 @@ function walk(dir, files = []) {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry)
     if (statSync(full).isDirectory()) walk(full, files)
-    else if (/\.(ts|mts|js|mjs)$/.test(entry)) files.push(full)
+    else if (/\.(ts|tsx|mts|js|jsx|mjs)$/.test(entry)) files.push(full)
   }
   return files
 }
