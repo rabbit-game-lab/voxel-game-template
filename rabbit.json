@@ -5,5 +5,41 @@
     "audio": true,
     "pointerLock": true,
     "storage": false
+  },
+  "topology": {
+    "profileVersion": 1,
+    "worldVersion": 6,
+    "style": "voxel-sandbox",
+    "surfaces": {
+      "player": [
+        { "path": "src/game.config.ts", "symbols": ["player"] },
+        { "path": "src/entities/player-avatar.ts", "symbols": ["createPlayerAvatar"] }
+      ],
+      "movement": [
+        { "path": "src/game.config.ts", "symbols": ["player"] },
+        { "path": "src/sim/player.ts", "symbols": ["stepPlayer"] }
+      ],
+      "world": [
+        { "path": "src/game.config.ts", "symbols": ["world"] },
+        { "path": "src/voxel/generator.ts", "symbols": ["generateWorld"] }
+      ],
+      "rules": [
+        { "path": "src/game.config.ts", "symbols": ["session", "interaction"] },
+        { "path": "src/sim/session.ts", "symbols": ["GameSession"] }
+      ],
+      "camera": [
+        { "path": "src/game.config.ts", "symbols": ["camera"] },
+        { "path": "src/entities/camera-rig.ts", "symbols": ["createCameraRig"] }
+      ],
+      "assets": [
+        { "path": "src/data/assets.ts", "symbols": ["ASSETS"] },
+        { "path": "src/data/blocks.ts", "symbols": ["BLOCKS"] }
+      ],
+      "presentation": [
+        { "path": "src/game.config.ts", "symbols": ["environment", "visual", "audio"] },
+        { "path": "src/entities/environment.ts", "symbols": ["createEnvironment"] },
+        { "path": "src/systems/hud.ts", "symbols": ["createHud"] }
+      ]
+    }
   }
 }
