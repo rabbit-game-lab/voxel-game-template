@@ -45,6 +45,16 @@ export function createGameAudio(config: GameConfig): AudioHandle {
           sound.tone({ freq: 620, slideTo: 1240, duration: 0.16, type: 'sine', volume: 0.04 })
           sound.tone({ freq: 930, duration: 0.12, delayMs: 70, type: 'sine', volume: 0.025 })
           break
+        case 'pickup':
+          sound.tone({ freq: 520, slideTo: 780, duration: 0.11, type: 'triangle', volume: 0.03 })
+          break
+        case 'discovery':
+          sound.tone({ freq: 392, slideTo: 587, duration: 0.22, type: 'sine', volume: 0.03 })
+          sound.tone({ freq: 784, duration: 0.18, delayMs: 120, type: 'sine', volume: 0.022 })
+          break
+        case 'respawn':
+          sound.tone({ freq: 210, slideTo: 480, duration: 0.26, type: 'triangle', volume: 0.03 })
+          break
         case 'invalid':
           sound.tone({ freq: 150, slideTo: 105, duration: 0.08, volume: 0.02 })
           break

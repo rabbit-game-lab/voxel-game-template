@@ -1,10 +1,10 @@
 # Rabbit Voxel Lab — Agent Guide
 
-First-person voxel sandbox on a finite deterministic world: break and place blocks,
-collect crystals at beacon sockets, survive falls, and win once all crystals are
-placed. Built with **PlayCanvas (engine-only) + Vite + TypeScript**. Terrain,
-water, clouds, and the default avatar are procedural; an optional Quaternius GLB
-loads when selected in config.
+Configurable voxel sandbox on a finite deterministic island: explore procedural
+forest content, break and place blocks, collect items, discover landmarks, and
+optionally run beacon or collection missions. Built with **PlayCanvas
+(engine-only) + Vite + TypeScript**. Terrain, water, clouds, content, and the
+default avatar are procedural; an optional Quaternius GLB loads when selected.
 
 ## Commands
 
@@ -50,16 +50,18 @@ src/
   environment/
     config.ts             Environment types consumed by CONFIG.environment.
     lakes.ts              Deterministic lake membership rules.
+  content/                Presets, deterministic plans, archetypes, prop targeting.
   sim/                    Engine-agnostic fixed-step gameplay.
     types.ts              InputSnapshot, phases, session types.
     player.ts             Movement, wading, collision vs voxels (no physics engine).
-    session.ts            Inventory, editing, crystals, victory/defeat.
+    session.ts            Inventory, editing, missions, pickups, respawn.
   entities/               PlayCanvas render layer (reads sim state, never mutates it).
     scene.ts              Lights, fog, camera entity.
     world-view.ts         Chunk entity pool, opaque + liquid meshes, remesh budget.
     camera-rig.ts         First/third-person strategies, collision, aim ray.
     player-avatar.ts      Procedural or imported avatar mirror.
     environment.ts        Sky, clouds, water, shore props factory registry.
+    content.ts            Merged procedural props and collectible meshes.
     effects.ts            Break/place particles.
     helpers.ts            Materials and primitive helpers.
   systems/
@@ -89,6 +91,8 @@ ranges live in `docs/game-config.md`.
 | World size, spawn, landmarks, starting blocks | `CONFIG.world` |
 | Reach, break/place cadence | `CONFIG.interaction` |
 | Sky, day/night, lakes, clouds, ambience | `CONFIG.environment` |
+| Forest/minimal density, colors, landmarks, collectibles | `CONFIG.content` |
+| Sandbox/beacon/collect objective | `CONFIG.mission` |
 | Block tints, selection colors | `CONFIG.visual` |
 | Volumes | `CONFIG.audio` |
 | Remesh budget, catch-up steps | `CONFIG.performance` |
@@ -103,13 +107,14 @@ fork movement physics per camera mode.
 3. **Terrain / landmarks** → `src/voxel/generator.ts` (keep seed determinism).
 4. **Meshing / liquids** → `src/voxel/mesher.ts` and `src/entities/world-view.ts` (one entity per chunk, remesh cap).
 5. **Player movement** → `src/sim/player.ts` (fixed-step, engine-independent).
-6. **Break/place rules** → `src/sim/session.ts` + `src/voxel/raycast.ts`.
+6. **Break/place rules** → `src/sim/session.ts`, `src/content/interaction.ts` + `src/voxel/raycast.ts`.
 7. **Camera presentation** → `src/entities/camera-rig.ts` (five-voxel traces, water/decor exclusion).
 8. **Environment visuals** → factories under `src/entities/environment*.ts`; register in `environment.ts`.
-9. **Controls / pointer lock** → `src/systems/input.ts` and `src/systems/pointer-lock.ts`.
-10. **HUD copy and layout** → `src/systems/hud.ts` only.
-11. **Sounds** → `src/systems/audio.ts` over the SDK `sound` module.
-12. **Art** → `public/assets/` + `src/data/assets.ts`; Quaternius provenance in `THIRD_PARTY.md`.
+9. **Trees, props, landmarks, pickups** → `src/content/` planning plus merged rendering in `src/entities/content.ts`.
+10. **Controls / pointer lock** → `src/systems/input.ts` and `src/systems/pointer-lock.ts`.
+11. **HUD copy and layout** → `src/systems/hud.ts` only.
+12. **Sounds** → `src/systems/audio.ts` over the SDK `sound` module.
+13. **Art** → `public/assets/` + `src/data/assets.ts`; Quaternius provenance in `THIRD_PARTY.md`.
 
 **Before writing a system for X, check whether an SDK module already does it.**
 They live in `src/rabbit/`, are never edited, and each file's header lists the
@@ -144,6 +149,8 @@ true`, so `requestPointerLock` is allowed; the adapter lives in
 - Keep every `src/` file **≤ 400 lines**; split near 250–300.
 - World bounds stay finite; dimensions stay multiples of 16. Block `0` stays air.
 - Never create one entity, collider, material, or DOM node per block.
+- Keep small props and pickups in merged meshes. Use engine-independent bounds
+  for break targeting and remove decorations when their supporting voxel breaks.
 - Water stays non-solid, non-raycastable, replaceable, and off the hotbar.
 - Pause and end states block simulation, editing, scoring, and session audio.
 - `main.ts` depends on one game-owned export: `setupGame(app)` in `systems/loop.ts`
@@ -168,6 +175,9 @@ session state without duplicating listeners or GPU resources.
 - Camera switches reuse one camera, one avatar root, and one shadow rig.
 - Third-person interaction must pass both camera-center and player-eye DDA checks.
 - The procedural avatar is default; GLB selection must not change the player AABB.
+- `mission.active: 'none'` must remain an open sandbox and never trigger victory.
+- Respawn restores player motion/camera without rebuilding the session; restart
+  remains the full deterministic regeneration boundary.
 - Only the Quaternius pixel atlas is boot-critical in v1; new third-party assets need `THIRD_PARTY.md`.
 
 ## Validation

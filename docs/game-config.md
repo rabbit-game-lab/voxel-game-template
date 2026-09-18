@@ -1,65 +1,81 @@
-# Configuración del juego
+# Game configuration
 
-`src/game.config.ts` es la única superficie de tuning. La validación ocurre antes de cargar assets o crear entidades; una combinación inválida presenta un error visible y no anuncia `rabbit:ready`.
+`src/game.config.ts` is the only tuning surface. Validation occurs before assets are loaded or entities are created; an invalid combination displays a visible error and never announces `rabbit:ready`.
 
-## Sesión y jugador
+## Session and player
 
-- `session.requiredCrystals` debe coincidir con la cantidad de sockets y nodos de cristal.
-- `session.defeatY` es el límite de caída.
-- Las dimensiones del cuerpo son metros. `eyeHeight` debe quedar dentro del cuerpo.
-- Velocidades usan m/s; aceleración y gravedad usan m/s².
-- `coyoteTime` está expresado en segundos.
+- `session.fallY` is the fall limit, and `fallBehavior` accepts `respawn` or `defeat`.
+- `session.respawn` determines whether a fall preserves block inventory, collectibles, and voxel edits. The default preserves all three.
+- Body dimensions are measured in meters. `eyeHeight` must remain inside the body.
+- Speeds use m/s; acceleration and gravity use m/s².
+- `coyoteTime` is expressed in seconds.
 
-## Cámara y controles
+## Camera and controls
 
-- `camera.initialMode` acepta `first-person` o `third-person`. Es la receta mínima para cambiar la vista inicial y también la vista restaurada por restart.
-- `camera.switching.enabled` habilita el cambio durante gameplay; `showButton` sólo muestra u oculta el control HUD. El sistema sigue disponible mediante `GameHandle.setCameraMode()` aunque la UI esté oculta.
-- Cada estrategia posee su propio `fov` y `pitchRange`, expresados en grados. `clipping.near/far` se comparte.
-- En tercera persona, `distance` y `height` definen el boom; `collisionRadius`, `collisionPadding`, `minDistance` y `returnSpeed` controlan su colisión y recuperación. El centro de cámara produce el rayo real del crosshair.
-- Sensibilidades de mouse/touch son grados por pixel; `padLookSpeed` usa grados por segundo.
-- `gamepadDeadZone` pertenece a `[0, 1)`.
-- `fallbackDragThreshold` evita interpretar como rotura un clic que se desplazó demasiado; sin pointer lock, mover el cursor sobre el canvas rota la cámara sin mantener un botón.
-- `V`, el botón HUD y `Y` de gamepad alternan las vistas cuando switching está habilitado.
+- `camera.initialMode` accepts `first-person` or `third-person`. It is the minimal recipe for changing the initial view and the view restored by restart.
+- `camera.switching.enabled` enables switching during gameplay; `showButton` only shows or hides the HUD control. The system remains available through `GameHandle.setCameraMode()` when the UI is hidden.
+- Each strategy has its own `fov` and `pitchRange`, expressed in degrees. `clipping.near/far` is shared.
+- In third person, `distance` and `height` define the camera boom; `collisionRadius`, `collisionPadding`, `minDistance`, and `returnSpeed` control collision and recovery. The camera center produces the crosshair's actual ray.
+- Mouse and touch sensitivities are measured in degrees per pixel; `padLookSpeed` uses degrees per second.
+- `gamepadDeadZone` belongs to `[0, 1)`.
+- Desktop mouse gameplay requires pointer lock. Start and Continue request capture from a user gesture; gameplay stays paused until capture succeeds. Escape or loss of capture opens pause immediately. Escape never resumes the game.
+- `fallbackDragThreshold` is retained for configuration compatibility but no longer used: free-cursor mouse gameplay is disabled. Touch and gamepad do not require pointer lock.
+- A rejected capture shows a retry overlay. Rabbit's embedding iframe must allow pointer lock (including `allow-pointer-lock` when sandboxed). Studio resume does not bypass the local Continue/capture step.
+- A rejected recapture within 1.5 seconds of unlocking is treated as potentially temporary: Continue stays pending and retries once after that window. Gameplay remains paused. Only a failed retry shows the error overlay; Escape, reset, destruction, or Studio pause cancel the queued attempt.
+- `V`, the HUD button, and gamepad `Y` switch views when switching is enabled.
 
 ## Avatar
 
-- `player.avatar.renderer` acepta `procedural` o `gltf`. No cambia el AABB, la física ni la simulación.
-- `procedural` controla proporciones, colores y amplitud/frecuencia de idle, walk y run; usa materiales y entidades reutilizables.
-- `gltf.assetKey` debe existir en el manifest condicional de `src/data/assets.ts`. El backend incluido carga `quaterniusHero` y exige `Idle`, `Walk`, `Run`, `Jump`, `Jump_Idle` y `Jump_Land`.
-- `scale`, `yOffset` y `rotationY` corrigen la autoría del GLB; `blendTime` controla las transiciones.
-- `turnSpeed` orienta el avatar hacia movimiento o una edición exitosa durante `actionFacingTime`.
-- La sombra es visual y no agrega collider. Avatar y sombra sólo se renderizan en tercera persona.
+- `player.avatar.renderer` accepts `procedural` or `gltf`. It does not change the AABB, physics, or simulation.
+- `procedural` controls proportions, colors, and idle, walk, and run animation frequency and amplitude; it uses reusable materials and entities.
+- `gltf.assetKey` must exist in the conditional manifest in `src/data/assets.ts`. The included backend loads `quaterniusHero` and requires `Idle`, `Walk`, `Run`, `Jump`, `Jump_Idle`, and `Jump_Land`.
+- `scale`, `yOffset`, and `rotationY` correct GLB authoring differences; `blendTime` controls transitions.
+- `turnSpeed` rotates the avatar toward movement or toward a successful edit for `actionFacingTime`.
+- The shadow is visual and adds no collider. The avatar and shadow render only in third person.
 
-## Mundo
+## World
 
-- `world.min` y `world.size` definen bounds `[min, min + size)`.
-- Cada dimensión debe ser un múltiplo positivo de 16.
-- Spawn, sockets y cristales deben ser únicos y estar dentro de bounds.
-- La seed controla el value noise determinista. Landmarks se aplican después del terreno.
-- `startingInventory` sólo acepta block keys del registro y enteros no negativos.
+- `world.min` and `world.size` define bounds `[min, min + size)`.
+- Each dimension must be a positive multiple of 16.
+- Spawn, sockets, and crystals must be unique and inside the bounds. The default world is `64×32×64` and creates 32 chunks.
+- The seed controls terrain, zones, placements, and variants. The voxel content plan is applied before initial meshing.
+- `startingInventory` accepts only block keys from the registry and non-negative integers.
 
-## Ambiente
+## Content and missions
 
-- `environment.sky.initialMode` acepta `day` o `night`. Cambiarlo es la receta mínima para que una AI haga arrancar el juego de día o de noche.
-- `environment.sky.showToggleButton` muestra u oculta el selector ☾/☀ sin eliminar los presets ni el controlador runtime.
-- `environment.sky.presets.day/night` coordina domo, cuerpo celeste, luz, niebla, nubes, terreno y agua. En cada preset `fogStart` debe ser menor que `fogEnd`.
-- `environment.sky.stars` controla una única malla nocturna de hasta 96 estrellas; se genera una vez y sólo se activa en modo noche.
-- `environment.clouds.layers` admite hasta 16 nubes en total. Cada capa define cantidad, altitud, velocidad y rango de escala.
-- `environment.water.lakes` admite múltiples lagos deterministas. El centro usa `[x, yDelBloqueDeAgua, z]`; radios y costa deben caber completamente dentro del mundo y no superponer spawn, faro o cristales.
-- `surfaceInset` desplaza la cara superior dentro del bloque para evitar z-fighting. `wadeSpeedMultiplier` sólo afecta velocidad horizontal con agua en los pies.
-- Juncos, piedras y partículas son visuales: no tienen colisión ni participan del raycast.
-- Límites: 16 nubes, 64 juncos, 32 piedras y 24 partículas.
-- `environment.ambience` controla ráfagas procedurales; los intervalos son rangos `[mínimo, máximo]` en segundos.
+- `content.preset` accepts `forest` or `minimal`; each preset is complete and does not inherit from the other.
+- Trees, densities, colors, scales, zones, landmarks, collectibles, and discoveries live in `CONFIG.content`.
+- `content.interaction.breakableDecorations` enables center-ray targeting for merged props. `removeUnsupportedDecorations` removes a prop when its supporting voxel becomes non-solid.
+- Content limits are validated before entities are created. The renderer uses at most five of the six budgeted draw calls.
+- `mission.active` accepts `none`, `beacon`, or `collect`. `none` hides the objective and never ends the sandbox.
+- `beacon` generates the beacon, sockets, and crystal nodes only when active. Its quantity must match the world arrays.
+- `collect` guarantees enough units of the configured `item` even when the preset contains fewer.
+- `onComplete` accepts `victory` or `continue`.
 
-Las recetas de edición segura y presets están en [`environment-config.md`](environment-config.md).
+AI recipes are available in [`content-config.md`](content-config.md).
 
-## Visual, audio y rendimiento
+## Environment
 
-- Colores son strings CSS hex aceptados por PlayCanvas.
-- `visual` conserva sólo tintes de caras, selección y sockets; cielo, luz y niebla viven en `environment.sky`.
-- Volúmenes pertenecen a `[0, 1]`.
-- `maxChunkRebuildsPerFrame` limita picos por edición; el boot siempre construye los 18 chunks.
-- `fragmentPoolSize` es fijo y no crece durante la sesión.
-- `maxCatchupSteps` limita el catch-up de la simulación fija de 60 Hz.
+- `environment.sky.initialMode` accepts `day` or `night`. Changing it is the minimal recipe for making the game start during the day or at night.
+- `environment.sky.showToggleButton` shows or hides the moon/sun selector without removing the presets or runtime controller.
+- `environment.sky.presets.day/night` coordinates the dome, celestial body, lighting, fog, clouds, terrain, and water. In each preset, `fogStart` must be smaller than `fogEnd`.
+- `environment.sky.stars` controls one nighttime mesh containing up to 96 stars; it is generated once and enabled only at night.
+- `environment.clouds.layers` supports up to 16 total clouds. Each layer defines its count, altitude, speed, and scale range.
+- `environment.water.lakes` supports multiple deterministic lakes. The center uses `[x, waterBlockY, z]`; the radii and shore must fit completely inside the world without overlapping the spawn, beacon, or crystals.
+- `surfaceInset` moves the top face inside the block to prevent z-fighting. `wadeSpeedMultiplier` affects only horizontal speed while the player's feet are in water.
+- Atmospheric particles are visual. Reeds and rocks now belong to `CONFIG.content` with the other props.
+- Environment limits: 16 clouds and 24 particles.
+- `environment.ambience` controls procedural bursts; intervals are `[minimum, maximum]` ranges in seconds.
 
-No son configurables por diseño: tamaño de chunk, paso fijo, layout de arrays, algoritmos de generación/meshing/colisión/DDA/cámara, rutas y filtros de assets, ni lifecycle Rabbit.
+Safe editing recipes and presets are available in [`environment-config.md`](environment-config.md).
+
+## Visuals, audio, and performance
+
+- Colors are CSS hex strings accepted by PlayCanvas.
+- `visual` contains only face, selection, and socket tints; the sky, lighting, and fog live in `environment.sky`.
+- Volumes belong to `[0, 1]`.
+- `maxChunkRebuildsPerFrame` limits editing spikes; boot always builds all 32 chunks.
+- `fragmentPoolSize` is fixed and does not grow during the session.
+- `maxCatchupSteps` limits catch-up for the fixed 60 Hz simulation.
+
+The following are intentionally not configurable: chunk size, fixed time step, array layout, generation, meshing, collision, DDA and camera algorithms, asset paths and filters, and the Rabbit lifecycle.

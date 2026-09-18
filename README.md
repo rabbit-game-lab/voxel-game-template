@@ -2,9 +2,9 @@
 
 ![Rabbit Voxel Lab](docs/screenshots/rabbit-voxel-lab.jpg)
 
-Template 3D de construcción por bloques para Rabbit Game Lab, construido con PlayCanvas, Vite y TypeScript estricto. Incluye vistas FPS y tercera persona, un explorador voxel visible y el objetivo de recuperar tres cristales expuestos para colocarlos en los sockets luminosos del faro.
+Template 3D de construcción por bloques para Rabbit Game Lab, construido con PlayCanvas, Vite y TypeScript estricto. Incluye vistas FPS y tercera persona, un explorador voxel visible y un sandbox procedural con misiones intercambiables.
 
-La isla incluye un ambiente natural enteramente procedural: presets coordinados de día/noche, sol, luna y estrellas, dos capas de nubes voxel, un lago orgánico transitable, costa con juncos y piedras, partículas y audio suave de viento/agua. No requiere assets ambientales ni dependencias adicionales.
+La isla `64×32×64` incluye un ambiente enteramente procedural: bosque mixto editable, troncos, flores, juncos, carteles, fogata, ruina, mirador, recogibles y descubrimientos, además de día/noche, nubes, lago y audio ambiental. No requiere assets ambientales ni dependencias adicionales. Las decoraciones pequeñas pueden picarse y desaparecen si se rompe el bloque sólido que las sostiene, sin dejar de usar mallas combinadas.
 
 ## Ejecutar
 
@@ -27,11 +27,11 @@ node ~/.codex/skills/create-rabbit-playcanvas-game/scripts/audit-template.mjs .
 
 | Dispositivo | Movimiento y cámara | Acciones |
 |---|---|---|
-| Desktop | WASD; mover el cursor rota la cámara; Shift para sprint | Espacio salta, LMB rompe, RMB coloca, V cambia cámara, rueda/1–6 selecciona, Esc/P pausa |
+| Desktop | WASD; mouse capturado rota la cámara; Shift para sprint | Espacio salta, LMB rompe, RMB coloca, V cambia cámara, rueda/1–6 selecciona, Esc/P pausa |
 | Touch | Joystick izquierdo, drag derecho | Botones de salto, romper, colocar y cámara; hotbar tocable |
 | Gamepad | Stick izquierdo y derecho | A salta, Y cambia cámara, RT rompe, LT coloca, LB/RB cambia slot, Start pausa |
 
-Sin pointer lock, mover el cursor sobre el canvas rota la cámara sin mantener ningún botón. El pointer lock queda disponible como modo opcional para giros ilimitados; LMB rompe y RMB coloca en ambos modos.
+Con mouse, entrar y continuar requieren pointer lock para giros ilimitados. Un solo Escape libera el cursor y pausa inmediatamente; Continuar recupera la captura antes de reanudar. Si el navegador rechaza la captura, el juego permanece detenido y permite reintentar. Touch y gamepad no requieren captura. LMB rompe y RMB coloca.
 
 ## Arquitectura
 
@@ -40,18 +40,19 @@ Sin pointer lock, mover el cursor sobre el canvas rota la cámara sin mantener n
 - `src/data/blocks.ts`: registro de bloques e IDs estables.
 - `src/voxel/`: `Uint8Array` por chunk, generación determinista, DDA y face-culling.
 - `src/environment/`: contrato tipado y reglas deterministas de lagos.
+- `src/content/`: presets tipados, placement determinista y archetypes voxel.
 - `src/sim/`: jugador cinemático y reglas sin dependencias de PlayCanvas.
-- `src/entities/`: escena, cámaras, avatares, mallas opaca/líquida por chunk, ambiente, selección y efectos.
+- `src/entities/`: escena, cámaras, avatares, mallas de chunks y contenido combinado, ambiente, selección y efectos.
 - `src/systems/`: composición, input normalizado, HUD, audio y lifecycle Rabbit.
 - `src/rabbit/`: contrato de plataforma protegido.
 
-El mundo mide 48×32×48 y contiene 18 chunks de 16³. Se generan todos antes de `ready`; las ediciones reconstruyen como máximo dos chunks por frame y también invalidan el vecino cuando tocan un borde. El agua usa una capa transparente compartida: no tiene física de fluidos, no bloquea el DDA y se restaura de forma determinista cuando se rompe un bloque colocado dentro del lago.
+El mundo mide 64×32×64 y contiene 32 chunks de 16³. Se generan todos antes de `ready`; las ediciones reconstruyen como máximo dos chunks por frame y también invalidan el vecino cuando tocan un borde. El agua usa una capa transparente compartida: no tiene física de fluidos, no bloquea el DDA y se restaura de forma determinista cuando se rompe un bloque colocado dentro del lago.
 
 ## Tuning para AI
 
 `CONFIG.camera` concentra modo inicial, selector, FOV, sensibilidad y cámara de seguimiento; `CONFIG.player.avatar` elige el explorador procedural o el GLB de Quaternius. Para arrancar en tercera persona basta cambiar `camera.initialMode` a `third-person`; la UI puede ocultarse con `camera.switching.showButton: false` sin retirar el sistema.
 
-`CONFIG.environment` concentra los presets `day/night`, estrellas, nubes, lagos, costa, partículas y audio. El selector temporal está oculto por defecto; para arrancar de noche basta cambiar `environment.sky.initialMode` a `night`. Las recetas están en [`docs/game-config.md`](docs/game-config.md) y [`docs/environment-config.md`](docs/environment-config.md).
+`CONFIG.environment` concentra los presets `day/night`, estrellas, nubes, lagos, partículas y audio. `CONFIG.content.preset` alterna entre `forest` y `minimal`; `CONFIG.mission.active` elige `none`, `beacon` o `collect`. El selector día/noche está oculto por defecto. Las recetas están en [`docs/game-config.md`](docs/game-config.md), [`docs/environment-config.md`](docs/environment-config.md) y [`docs/content-config.md`](docs/content-config.md).
 
 ## Asset CC0
 
@@ -61,4 +62,4 @@ Una extensión futura con props del pack debe seguir este flujo: seleccionar só
 
 ## Alcance deliberado
 
-No hay mundo infinito, streaming, greedy meshing, crafting, enemigos, natación, simulación de fluidos, iluminación voxel, backend, guardado ni multiplayer. Restart y recarga vuelven a generar la seed `1337`. Greedy meshing se evaluará únicamente si mediciones en dispositivos objetivo demuestran que el face-culling actual no alcanza.
+No hay mundo infinito, streaming, greedy meshing, crafting, enemigos, fauna, natación, simulación de fluidos, iluminación voxel, backend, guardado ni multiplayer. Caer produce respawn sin perder el sandbox; restart y recarga vuelven a generar la seed `1337`. Greedy meshing se evaluará únicamente si mediciones en dispositivos objetivo demuestran que el face-culling actual no alcanza.

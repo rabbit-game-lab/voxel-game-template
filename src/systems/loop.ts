@@ -3,19 +3,22 @@ import type { CameraMode } from '../camera/config'
 import { ASSETS } from '../data/assets'
 import { BLOCKS } from '../data/blocks'
 import type { TimeOfDay } from '../environment/config'
-import { createEffects, type EffectsHandle } from '../entities/effects'
-import { createEnvironment, type EnvironmentHandle } from '../entities/environment'
-import { createScene, type SceneHandle } from '../entities/scene'
-import { createWorldView, type WorldViewHandle } from '../entities/world-view'
+import { createEffects } from '../entities/effects'
+import { createContent } from '../entities/content'
+import { createEnvironment } from '../entities/environment'
+import { createScene } from '../entities/scene'
+import { createWorldView } from '../entities/world-view'
 import { CONFIG } from '../game.config'
 import { createAssets, type AssetsHandle } from '../rabbit/assets'
-import { createPause, type PauseHandle } from '../rabbit/pause'
+import { createPause } from '../rabbit/pause'
 import { GameSession } from '../sim/session'
-import type { InputSnapshot, SimInput } from '../sim/types'
-import { createGameAudio, type AudioHandle } from './audio'
+import type { InputSnapshot } from '../sim/types'
+import { createGameAudio } from './audio'
 import { validateConfig } from './config-validator'
 import { createHud, type HudHandle } from './hud'
-import { createInput, type InputHandle } from './input'
+import { createInput } from './input'
+import { createPlayFocus } from './play-focus'
+import { toSimInput, type RuntimeState } from './runtime-state'
 
 const FIXED_STEP = 1 / 60
 
@@ -27,29 +30,11 @@ export interface GameHandle {
   destroy(): void
 }
 
-interface Runtime {
-  session: GameSession
-  assets: AssetsHandle
-  scene: SceneHandle
-  view: WorldViewHandle
-  effects: EffectsHandle
-  environment: EnvironmentHandle
-  input: InputHandle
-  audio: AudioHandle
-  pause: PauseHandle
-}
-
-function simInput(snapshot: InputSnapshot, jumpPressed: boolean): SimInput {
-  return {
-    moveX: snapshot.moveX, moveZ: snapshot.moveZ, sprint: snapshot.sprint,
-    jumpPressed,
-  }
-}
-
 export function setupGame(app: pc.Application): GameHandle {
   const canvas = app.graphicsDevice.canvas as HTMLCanvasElement
   const ui = document.getElementById('ui') as HTMLElement
-  let runtime: Runtime | null = null
+  let runtime: RuntimeState | null = null
+  let focus: ReturnType<typeof createPlayFocus> | null = null
   let destroyed = false
   let accumulator = 0
   let lastDevice: InputSnapshot['device'] = 'keyboard'
@@ -72,19 +57,24 @@ export function setupGame(app: pc.Application): GameHandle {
     const current = runtime
     if (!current || destroyed) return
     current.session.restart()
+    focus?.reset()
     current.view.rebuildAll()
     current.effects.reset()
     current.environment.reset()
+    current.content.reset(
+      current.session.contentPlan, current.session.collectibleActiveSnapshot(),
+      current.session.decorationActiveSnapshot(),
+    )
     cameraMode = CONFIG.camera.initialMode
     current.scene.reset(current.session.player)
     timeOfDay = CONFIG.environment.sky.initialMode
     current.scene.setTimeOfDay(timeOfDay)
     current.environment.setTimeOfDay(timeOfDay)
+    current.content.setTimeOfDay(timeOfDay)
     current.view.setTimeOfDay(timeOfDay)
     current.audio.reset()
     current.input.clear()
     current.input.releaseFocus()
-    current.pause.set(false)
     accumulator = 0
     performanceFrames = 0; performanceElapsed = 0; performanceWorst = 0; performanceReported = false
     bufferedJump = false; bufferedPlace = false; bufferedBreak = false
@@ -115,15 +105,10 @@ export function setupGame(app: pc.Application): GameHandle {
   }
 
   const hud: HudHandle = createHud(ui, CONFIG, {
-    start() {
-      const current = runtime
-      if (!current || current.pause.isPaused()) return
-      current.session.begin()
-      void current.input.requestFocus()
-      updatePresentation(current)
-    },
+    start(device) { focus?.resume(device) },
     restart,
-    togglePause() { runtime?.pause.toggle() },
+    togglePause() { focus?.stop() },
+    resume(device) { focus?.resume(device) },
     toggleCamera,
     toggleTimeOfDay() {
       const current = runtime
@@ -131,24 +116,25 @@ export function setupGame(app: pc.Application): GameHandle {
       timeOfDay = timeOfDay === 'day' ? 'night' : 'day'
       current.scene.setTimeOfDay(timeOfDay)
       current.environment.setTimeOfDay(timeOfDay)
+      current.content.setTimeOfDay(timeOfDay)
       current.view.setTimeOfDay(timeOfDay)
       updatePresentation(current)
     },
     selectSlot(index) { pendingSlot = index },
-    capturePointer() { void runtime?.input.requestFocus() },
   })
 
-  function updatePresentation(current: Runtime): void {
+  function updatePresentation(current: RuntimeState): void {
     const target = current.session.targetSnapshot().hit
     current.view.setSelection(current.session.phase === 'playing' ? target?.voxel ?? null : null)
     current.view.setSockets(CONFIG.world.beaconSockets.map((socket) =>
-      current.session.world.getBlock(socket[0], socket[1], socket[2]) === BLOCKS.crystal.id))
+      current.session.world.getBlock(socket[0], socket[1], socket[2]) === BLOCKS.crystal.id),
+    current.session.isBeaconMission())
     hud.update(current.session.getHudSnapshot(
       lastDevice, current.pause.isPaused(), timeOfDay, cameraMode,
-    ), current.input.isFocused())
+    ), current.input.isFocused(), focus?.status() ?? 'idle')
   }
 
-  function processEvents(current: Runtime): void {
+  function processEvents(current: RuntimeState): void {
     for (const event of current.session.consumeEvents()) {
       if (event.type === 'sound') current.audio.play(event.sound)
       if (event.type === 'edit') {
@@ -156,6 +142,22 @@ export function setupGame(app: pc.Application): GameHandle {
         current.effects.burst(event.voxel, event.block === 'crystal')
         current.scene.triggerAvatarAction(event.voxel)
       }
+      if (event.type === 'collectible') current.content.setCollectibleActive(event.index, false)
+      if (event.type === 'decoration') {
+        current.content.setDecorationActive(event.index, false)
+        if (event.reason === 'break') {
+          current.effects.burst(event.position, false)
+          current.scene.triggerAvatarAction(event.position)
+        }
+      }
+      if (event.type === 'reset') {
+        if (event.world) current.view.rebuildAll()
+        current.content.reset(
+          current.session.contentPlan, current.session.collectibleActiveSnapshot(),
+          current.session.decorationActiveSnapshot(),
+        )
+      }
+      if (event.type === 'respawn') current.scene.reset(current.session.player)
       if (event.type === 'phase' && (event.phase === 'victory' || event.phase === 'defeat')) {
         current.input.clear()
         current.input.releaseFocus()
@@ -169,7 +171,13 @@ export function setupGame(app: pc.Application): GameHandle {
     const frameDt = Math.min(Math.max(dt, 0), 0.1)
     const snapshot = current.input.snapshot(frameDt)
     lastDevice = snapshot.device
-    if (snapshot.pausePressed) current.pause.toggle()
+    if (snapshot.pausePressed) {
+      if (current.pause.isPaused()) focus?.resume('gamepad')
+      else focus?.stop()
+    }
+    if (current.session.phase === 'focus' && snapshot.jumpPressed && snapshot.device === 'gamepad') {
+      focus?.resume('gamepad')
+    }
     if (snapshot.cameraPressed) toggleCamera()
     if (snapshot.restartPressed && (current.session.phase === 'victory' || current.session.phase === 'defeat')) {
       restart()
@@ -200,7 +208,7 @@ export function setupGame(app: pc.Application): GameHandle {
       accumulator += frameDt
       let steps = 0
       while (accumulator >= FIXED_STEP && steps < CONFIG.performance.maxCatchupSteps) {
-        current.session.stepMovement(simInput(snapshot, steps === 0 && bufferedJump), FIXED_STEP)
+        current.session.stepMovement(toSimInput(snapshot, steps === 0 && bufferedJump), FIXED_STEP)
         if (steps === 0) {
           bufferedJump = false
         }
@@ -218,6 +226,7 @@ export function setupGame(app: pc.Application): GameHandle {
       processEvents(current)
       current.view.update()
       current.environment.update(frameDt, current.session.player)
+      current.content.update(frameDt)
       if (current.session.phase === 'playing') {
         current.effects.update(frameDt)
         current.audio.update(frameDt)
@@ -239,30 +248,37 @@ export function setupGame(app: pc.Application): GameHandle {
       const view = createWorldView(app, session.world, assets, CONFIG)
       const effects = createEffects(app, CONFIG)
       const environment = createEnvironment(app, scene.camera, session.world, CONFIG)
+      const content = createContent(app, session.contentPlan, session.collectibleActiveSnapshot(), CONFIG)
       const input = createInput(canvas, CONFIG)
       const audio = createGameAudio(CONFIG)
       audio.setMuted(muted)
       const pause = createPause({
-        keys: ['Escape', 'KeyP'], overlay: false, pauseOnBlur: false,
-        inputs: [input, audio, environment],
+        keys: [], overlay: false, pauseOnBlur: false,
+        inputs: [input, audio, environment, content],
         onChange(paused) {
           app.timeScale = paused ? 0 : 1
           if (paused) {
+            accumulator = 0; pendingSlot = null
             bufferedJump = false; bufferedPlace = false; bufferedBreak = false
             input.releaseFocus()
           }
-          updatePresentation({ session, assets: assets!, scene, view, effects, environment, input, audio, pause })
+          updatePresentation({ session, assets: assets!, scene, view, effects, environment, content, input, audio, pause })
         },
       })
-      runtime = { session, assets, scene, view, effects, environment, input, audio, pause }
+      runtime = { session, assets, scene, view, effects, environment, content, input, audio, pause }
+      focus = createPlayFocus({
+        input, pause, phase: () => session.phase, begin: () => session.begin(),
+        changed: () => { if (runtime) updatePresentation(runtime) },
+      })
       const aim = scene.updatePlayer(session.player, 0, false)
       session.updateTarget(aim, cameraMode)
       app.on('update', update)
       updatePresentation(runtime)
       const stats = view.stats()
       const environmentStats = environment.stats()
+      const contentStats = content.stats()
       const avatarStats = scene.avatarStats()
-      console.info(`[Rabbit Voxel Lab] ${stats.chunks} chunks, ${stats.drawCalls} terrain draw calls (${stats.waterDrawCalls} water), ${environmentStats.drawCalls} environment draw calls (${environmentStats.clouds} clouds, ${environmentStats.reeds} reeds, ${environmentStats.rocks} rocks, ${environmentStats.particles} particles), ${avatarStats.drawCalls} avatar draw calls (${avatarStats.renderer}), ${stats.triangles} terrain triangles, max boot remesh ${stats.maxRemeshMs.toFixed(1)} ms`)
+      console.info(`[Rabbit Voxel Lab] ${stats.chunks} chunks, ${stats.drawCalls} terrain draw calls (${stats.waterDrawCalls} water), ${environmentStats.drawCalls} environment draw calls (${environmentStats.clouds} clouds, ${environmentStats.particles} particles), ${contentStats.drawCalls} content draw calls (${contentStats.trees} trees, ${contentStats.decorations} props, ${contentStats.collectibles} collectibles), ${avatarStats.drawCalls} avatar draw calls (${avatarStats.renderer}), ${stats.triangles} terrain triangles, max boot remesh ${stats.maxRemeshMs.toFixed(1)} ms`)
       resolveReady()
     } catch (error) {
       assets?.destroy()
@@ -285,12 +301,13 @@ export function setupGame(app: pc.Application): GameHandle {
     destroy() {
       if (destroyed) return
       destroyed = true
+      focus?.destroy()
       app.off('update', update)
       const current = runtime
       runtime = null
       if (current) {
         current.pause.destroy(); current.input.destroy(); current.audio.destroy()
-        current.effects.destroy(); current.environment.destroy(); current.view.destroy()
+        current.effects.destroy(); current.environment.destroy(); current.content.destroy(); current.view.destroy()
         current.scene.destroy(); current.assets.destroy()
       }
       hud.destroy()

@@ -63,8 +63,6 @@ export interface EnvironmentConfig {
     lakes: readonly LakeConfig[]
   }
   decorations: {
-    reeds: { enabled: boolean; count: number; color: string }
-    rocks: { enabled: boolean; count: number; color: string }
     particles: { enabled: boolean; count: number; color: string }
   }
   ambience: {

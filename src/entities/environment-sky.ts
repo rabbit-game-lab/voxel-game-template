@@ -14,7 +14,7 @@ interface SkyRuntime {
 }
 
 function stats(drawCalls: number): EnvironmentFeatureStats {
-  return { drawCalls, clouds: 0, reeds: 0, rocks: 0, particles: 0 }
+  return { drawCalls, clouds: 0, particles: 0 }
 }
 
 export function createSkyFeature(context: FeatureContext): EnvironmentFeature {

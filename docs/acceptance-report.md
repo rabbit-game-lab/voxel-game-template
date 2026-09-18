@@ -1,116 +1,172 @@
 # Acceptance report
 
-Evidencia observada el 2026-08-23/24 (America/Argentina/Buenos_Aires).
+## Breakable, support-aware decorations — 2026-09-18
 
-## Gates automáticos
+- Merged bushes, flowers, reeds, rocks, signposts, and campfires now participate in center-ray targeting through engine-independent bounds while remaining non-colliding and batched by category.
+- Breaking a decoration clears its active bit, rebuilds the existing merged content meshes, and emits pooled break feedback. It adds no entity, collider, material, or draw call per prop.
+- Breaking a decoration's exact supporting voxel clears the same bit and removes the prop in the same interaction cycle. Removed decoration state survives respawn when world edits are preserved and resets with the deterministic world.
+- `node scripts/test-content-interaction.mjs` verified a direct flower hit/removal and removal caused by breaking its supporting voxel against a generated seed-1337 session.
+- Physical mouse, touch, and gamepad targeting of every decoration archetype remains a manual acceptance path.
 
-- `npm ci`: aprobado; lockfile instalado sin modificar dependencias.
-- `npm run check`: aprobado.
-- `npm run build`: aprobado con Vite 8.1.5. El warning de chunk >1.5 MB corresponde al bundle del motor PlayCanvas.
-- `audit-template.mjs`: 24 checks aprobados, 0 warnings.
-- `quick_validate.py`: skill `rabbit-voxel-lab-gamedev` válida.
-- Preview de producción: boot correcto y consola sin errores/warnings.
+## Pointer capture and pause correction — 2026-09-18
 
-La ampliación de ambiente del 2026-08-24 volvió a ejecutar `check`, `build` y la auditoría: 24 checks de contrato, 0 warnings. La build final conserva sólo el warning informativo de tamaño del bundle PlayCanvas.
+- Follow-up: the browser's post-Escape cooldown was being treated as a permanent capture failure. Chromium's `PointerLockController` defines a 1250 ms cooldown. The game now waits until 1500 ms after unlock and retries once when a recapture fails inside that window, without requiring a second click. Successful initial requests have no added delay.
+- Regression coverage also includes temporary denial followed by successful automatic recapture, persistent denial without a retry loop, and cancellation of the scheduled retry by Escape, reset, destruction, or Studio pause. These use a deterministic clock; a real quick Escape/Continue cycle remains a manual browser check.
 
-La ampliación de cámaras volvió a ejecutar los mismos gates y la validación de la skill local: todos aprobaron. El preview de producción en `127.0.0.1:4174` inició con consola limpia.
+This section supersedes the historical optional-pointer-lock and hover-look observations below.
 
-## Rabbit y lifecycle
+- Desktop mouse gameplay now waits for capture, and capture loss enters Rabbit pause immediately. Escape and P only pause; Continue reacquires capture before resuming.
+- `node --experimental-strip-types scripts/test-play-focus.mjs` exercises the actual Rabbit pause authority with simulated browser capture events: both Escape/unlock event orders, key repeat, five resume/loss cycles, denial, Studio pause and resume, touch/gamepad entry, switching to mouse, end-state releases, and late completions after reset, Escape, or destruction.
+- Automated clicks in both Codex's embedded browser and Chrome rejected pointer capture; both showed the blocking retry overlay rather than starting free-cursor gameplay.
+- The entry overlay was visually reviewed at 390×844. This is viewport testing, not physical multitouch certification.
+- Real granted pointer lock and hardware Escape in an external browser, deployment inside Rabbit's iframe, physical multitouch, and physical gamepad remain to be verified manually. No production deployment was performed.
+- Required checks: TypeScript/template check, production build, and Rabbit contract audit. The regression script is independent of runtime dependencies.
 
-- Iframe sandbox sin `allow-same-origin`: `rabbit:ready=1`, `rabbit:error=0`.
-- Atlas faltante en iframe opaco: overlay visible, `ready=0`, `error=1`.
-- Pausa Studio: el overlay aparece; el botón local Continuar no puede revertirla; resume Studio sí.
-- Cinco mensajes `rabbit:restart`: `ready` permanece en 1 y quedan exactamente un HUD, un canvas, un root touch y seis slots.
-- Boot directo y production preview: consola limpia.
-- Con cielo, agua y ambiente activos, cinco reinicios consecutivos conservaron exactamente 1 canvas, 1 HUD, 1 root touch y 6 slots. Inventario, objetivo y fase volvieron al estado inicial.
-- Dos capturas PNG separadas por 1,2 s durante pausa fueron idénticas byte a byte; nubes, partículas y escena quedaron congeladas.
+Evidence observed on 2026-08-23/24 (America/Argentina/Buenos_Aires).
 
-## Gameplay y responsive
+## Automated gates
 
-- Hover mouse-look verificado en desktop: mover el cursor entre dos puntos del canvas sin botones presionados cambió la orientación de cámara; pointer lock permanece como modo opcional.
-- Pointer lock fue rechazado por el browser de prueba; el fallback hover-look mantuvo el control de cámara disponible.
-- Cámara y DDA quedaron alineados con el crosshair después de corregir el signo del pitch.
-- Break de grass: dirt pasó de 12 a 13 exactamente una vez.
-- Place de dirt: dirt volvió de 13 a 12 exactamente una vez y la selección cambió a Dirt.
-- Hotbar por click seleccionó Stone; durante pausa un click no alteró inventario.
-- Layout inspeccionado en 1920×1080, 844×390 y 390×844.
+- `npm ci`: passed; the lockfile was installed without changing dependencies.
+- `npm run check`: passed.
+- `npm run build`: passed with Vite 8.1.5. The chunk-size warning above 1.5 MB corresponds to the PlayCanvas engine bundle.
+- `audit-template.mjs`: 24 checks passed, 0 warnings.
+- `quick_validate.py`: the `rabbit-voxel-lab-gamedev` skill is valid.
+- Production preview: successful boot with no console errors or warnings.
 
-## Ambiente natural
+The environment expansion on 2026-08-24 reran `check`, `build`, and the audit: 24 contract checks passed with 0 warnings. The final build retains only the informational PlayCanvas bundle-size warning.
 
-- Boot final: 10 nubes, 34 juncos, 18 piedras y 18 partículas, con layout determinista para seed `1337`.
-- El lago por defecto ocupa 3 chunks líquidos. La inspección desde costa mostró superficie transparente sin z-fighting, laterales completos, juncos combinados y partículas legibles.
-- Agua verificada por prueba interna descartable, retirada antes de la entrega:
-  - DDA atravesó agua y golpeó el fondo sólido.
-  - Colocar/reemplazar una celda natural y restaurarla devolvió `BlockId 7`.
-  - La entrada produjo un único `splash`.
-  - Velocidad estabilizada: `3,348 m/s` en agua frente a `5,4 m/s` en tierra, razón exacta `0,62`.
-  - Una edición líquida en una esquina de chunks invalidó dueño y dos vecinos (`3` chunks dirty).
-- El hotbar mantuvo seis slots y no expuso agua.
-- Preset mínimo probado con nubes, agua, decoraciones, partículas y ambience desactivados: 0 chunks líquidos, 0 props/partículas y sólo 2 draw calls de cielo/sol.
-- Configuración temporal con un segundo lago válido arrancó correctamente y pasó de 3 a 4 draw calls líquidos, sin cambios al compositor.
-- `opacity: 1.68` fue rechazado antes del boot con overlay legible `environment.water.opacity must be in (0, 1)`.
-- Capturas de revisión realizadas en el browser de aceptación a 1280×720 y 691×807; no se reemplazó el screenshot histórico del README.
+The camera expansion reran the same gates and local-skill validation; all passed. The production preview at `127.0.0.1:4174` started with a clean console.
 
-## Modo día y noche
+## Rabbit and lifecycle
 
-- El botón temporal de autoría aparece junto a Pausa sólo durante `playing`: en día muestra `☾` con etiqueta accesible `Cambiar a modo noche`; en noche muestra `☀` y `Cambiar a modo día`.
-- La alternancia visual fue verificada en ejecución: gradiente nocturno, luna, estrellas, nubes, niebla, luz, terreno y agua cambian como un preset coordinado; HUD, crosshair y hotbar conservan contraste.
-- Las 72 estrellas se combinan en una única malla. El perfil pasó de 7 draw calls ambientales en día a 8 en noche, sin reconstruir chunks ni crear entidades al alternar.
-- Una configuración temporal `initialMode: 'night'` + `showToggleButton: false` inició directamente de noche sin renderizar el botón, confirmando la ruta plug-and-play que quedará después de retirar esa UI.
-- Restart desde noche restauró el `initialMode` configurado y mantuvo exactamente 1 canvas, 1 HUD y 6 slots, sin duplicar recursos ni listeners.
-- Revisión responsive realizada a 1280×720 y 691×807: botón de modo y Pausa no se superponen. La consola permaneció sin errores ni warnings.
-- Configuración entregada: `showToggleButton: false`; el selector queda oculto por defecto mientras los presets y el controlador día/noche permanecen disponibles para AI.
+- Sandboxed iframe without `allow-same-origin`: `rabbit:ready=1`, `rabbit:error=0`.
+- Missing atlas in an opaque iframe: visible overlay, `ready=0`, `error=1`.
+- Studio pause: the overlay appears; the local Continue button cannot override it, while Studio resume can.
+- After five `rabbit:restart` messages, `ready` remained at 1 and exactly one HUD, one canvas, one touch root, and six slots remained.
+- Direct boot and production preview: clean console.
+- With the sky, water, and environment active, five consecutive restarts preserved exactly one canvas, one HUD, one touch root, and six slots. Inventory, objective, and phase returned to their initial state.
+- Two PNG captures taken 1.2 seconds apart during pause were byte-for-byte identical; clouds, particles, and the scene remained frozen.
 
-## Cámaras y personaje visible
+## Gameplay and responsive behavior
 
-- FPS se conserva como modo inicial y mantiene el mismo eye height, hover-look, pointer lock opcional, crosshair y DDA. El avatar y su sombra permanecen deshabilitados en esta vista.
-- El botón `3P/1P` alternó a una tercera persona centrada sin liberar foco; `V` fue verificado con un keypress sostenido hasta cruzar un frame de input.
-- La vista de tercera persona mostró el explorador procedural completo, apoyado en terreno, con sombra y 10 draw calls máximos (9 partes + sombra). Movimiento sigue siendo el mismo AABB y queda relativo al yaw de cámara.
-- El backend `Character_Male_2` cargó desde el GLB distribuido, se mostró correctamente riggeado y registró los seis clips obligatorios: `Idle`, `Walk`, `Run`, `Jump`, `Jump_Idle` y `Jump_Land`. La configuración entregada vuelve a `renderer: 'procedural'`.
-- Un path GLB inexistente produjo overlay visible y no llegó a gameplay. Una configuración con FOV inválido dejó únicamente el overlay de error, sin controles interactivos residuales.
-- Configuraciones temporales verificadas y luego revertidas:
-  - `initialMode: 'third-person'` + `showButton: false`: inició con avatar visible y cero botones de cámara.
-  - `switching.enabled: false`: ocultó el botón e ignoró `V`.
-  - `showToggleButton: true`: los controles día/noche, cámara y Pausa no se superpusieron en portrait.
-- Durante Pausa, `V` no cambió la vista; al continuar permaneció el modo previo.
-- Cincuenta clicks consecutivos del selector terminaron en FPS con exactamente 1 botón de cámara, 1 canvas y 6 slots.
-- Revisión visual realizada en 1280×720, 691×807 y 390×844. En portrait, objetivo, cámara y Pausa permanecieron legibles y sin solaparse.
-- El rayo de interacción en tercera persona se deriva del centro real de cámara y sólo conserva un target si otro DDA desde los ojos golpea primero el mismo voxel y está dentro del alcance.
+- Desktop hover mouse-look was verified: moving the cursor between two canvas points without pressing a button changed the camera orientation; pointer lock remains an optional mode.
+- The test browser rejected pointer lock; hover-look fallback kept camera control available.
+- Camera and DDA aligned with the crosshair after correcting the pitch sign.
+- Breaking grass increased dirt from 12 to 13 exactly once.
+- Placing dirt decreased dirt from 13 to 12 exactly once and changed the selection to Dirt.
+- Clicking the hotbar selected Stone; clicking during pause did not alter inventory.
+- Layout was inspected at 1920×1080, 844×390, and 390×844.
 
-## Perfil observado
+## Natural environment
 
-Muestra de tres segundos en el browser de prueba a viewport 1920×1080:
+- Final boot: 10 clouds, 34 reeds, 18 rocks, and 18 particles, with a deterministic layout for seed `1337`.
+- The default lake occupies three liquid chunks. Inspection from the shore showed a transparent surface without z-fighting, complete side faces, merged reeds, and readable particles.
+- Water was verified through a disposable internal test that was removed before delivery:
+  - DDA passed through water and hit the solid floor.
+  - Placing or replacing a natural cell and restoring it returned `BlockId 7`.
+  - Entering the water produced exactly one `splash`.
+  - Stabilized speed was `3.348 m/s` in water versus `5.4 m/s` on land, for an exact ratio of `0.62`.
+  - A liquid edit at a chunk corner invalidated the owner and two neighbors (`3` dirty chunks).
+- The hotbar kept six slots and did not expose water.
+- A minimal preset with clouds, water, decorations, particles, and ambience disabled produced 0 liquid chunks, 0 props or particles, and only two sky/sun draw calls.
+- A temporary configuration with a second valid lake booted successfully and increased liquid draw calls from three to four without changing the compositor.
+- `opacity: 1.68` was rejected before boot with the readable overlay `environment.water.opacity must be in (0, 1)`.
+- Review captures were taken in the acceptance browser at 1280×720 and 691×807; the historical README screenshot was not replaced.
 
-- 120.0 FPS promedio; peor frame 9.4 ms.
-- 18 chunks y 18 draw calls de terreno.
-- 14.124 triángulos de terreno.
-- Remesh máximo de boot observado: 2.2–2.4 ms (una corrida anterior registró 2.7 ms).
+## Day and night modes
 
-Esto satisface el target desktop de 60 FPS en el entorno probado. No equivale a un benchmark de hardware móvil.
+- The temporary authoring button appeared next to Pause only during `playing`: during the day it showed a moon icon with the accessible label “Switch to night mode”; at night it showed a sun icon with “Switch to day mode.”
+- The visual transition was verified at runtime: the night gradient, moon, stars, clouds, fog, lighting, terrain, and water changed as a coordinated preset; the HUD, crosshair, and hotbar retained their contrast.
+- All 72 stars are merged into one mesh. The profile changed from seven environment draw calls during the day to eight at night, without rebuilding chunks or creating entities when switching.
+- A temporary `initialMode: 'night'` plus `showToggleButton: false` configuration started directly at night without rendering the button, confirming the plug-and-play path that remains after removing the UI.
+- Restarting from night restored the configured `initialMode` and kept exactly one canvas, one HUD, and six slots, without duplicating resources or listeners.
+- Responsive review was performed at 1280×720 and 691×807: the mode and Pause buttons did not overlap. The console remained free of errors and warnings.
+- Delivered configuration: `showToggleButton: false`; the selector is hidden by default while the day/night presets and controller remain available to AI.
 
-Perfil de la ampliación ambiental en el browser instrumentado:
+## Cameras and visible character
 
-- 18 chunks, 21 draw calls de terreno (3 líquidos) y 7 de ambiente.
-- 14.570 triángulos de terreno/líquido; el ambiente usa geometría combinada y capacidad fija.
-- Remesh de boot normal observado: 3,9–4,4 ms; pico de 10,7 ms con ocho tabs WebGL simultáneos.
-- El browser instrumentado limitó tanto el preset completo como el mínimo a 30,0 FPS / ~34,3 ms. Como ambos perfiles dieron el mismo límite, esta corrida no permite certificar 60 FPS desktop ni atribuir la limitación al ambiente. Se conserva como evidencia el benchmark desktop previo de 120 FPS del template base.
-- La API disponible no expuso una medición fiable de memoria GPU; no se inventa una cifra.
+- FPS remains the initial mode and preserves the same eye height, hover-look, optional pointer lock, crosshair, and DDA. The avatar and its shadow remain disabled in this view.
+- The `3P/1P` button switched to centered third person without releasing focus; `V` was verified with a keypress held long enough to cross an input frame.
+- Third person displayed the complete procedural explorer standing on the terrain, with a shadow and at most 10 draw calls (nine parts plus the shadow). Movement still uses the same AABB and is relative to camera yaw.
+- The `Character_Male_2` backend loaded from the distributed GLB, displayed with its rig intact, and registered all six required clips: `Idle`, `Walk`, `Run`, `Jump`, `Jump_Idle`, and `Jump_Land`. The delivered configuration uses `renderer: 'procedural'` again.
+- A nonexistent GLB path produced a visible overlay and never reached gameplay. A configuration with an invalid FOV left only the error overlay, with no residual interactive controls.
+- Temporary configurations were verified and then reverted:
+  - `initialMode: 'third-person'` plus `showButton: false` started with the avatar visible and no camera buttons.
+  - `switching.enabled: false` hid the button and ignored `V`.
+  - `showToggleButton: true` kept the day/night, camera, and Pause controls from overlapping in portrait.
+- During Pause, `V` did not change the view; continuing preserved the previous mode.
+- Fifty consecutive selector clicks ended in FPS with exactly one camera button, one canvas, and six slots.
+- Visual review was performed at 1280×720, 691×807, and 390×844. In portrait, the objective, camera, and Pause controls remained readable without overlap.
+- The third-person interaction ray comes from the true camera center and keeps a target only when a second DDA from the player's eyes hits the same voxel first and remains within range.
 
-Perfil de producción observado con tercera persona procedural:
+## Observed profile
 
-- 18 chunks, 21 draw calls de terreno, 7 de ambiente y 10 del avatar/sombra.
-- 14.570 triángulos de terreno y remesh máximo de boot de 3,9 ms.
-- El browser instrumentado registró 32,6 FPS promedio y 34,3 ms de peor frame; mantiene el límite observado de este browser y no certifica hardware móvil.
+Three-second sample in the test browser at a 1920×1080 viewport:
 
-## Rutas no probadas físicamente
+- 120.0 average FPS; worst frame 9.4 ms.
+- 18 chunks and 18 terrain draw calls.
+- 14,124 terrain triangles.
+- Maximum observed boot remesh: 2.2–2.4 ms; an earlier run recorded 2.7 ms.
 
-- Pointer lock concedido por un navegador externo.
-- Multitouch real simultáneo (joystick + look + acción) y `pointercancel` de hardware.
-- Gamepad físico, desconexión y reconexión.
-- Botón `Y` y animaciones walk/run/jump/land con gamepad físico.
-- Colisión del boom contra todas las geometrías límite mediante un recorrido humano exhaustivo; la implementación usa cinco DDA voxel y fue inspeccionada visualmente cerca del spawn/faro.
-- Rendimiento en un teléfono móvil medio.
-- Rendimiento de la ampliación ambiental en desktop sin el cap de 30 FPS del browser instrumentado.
-- Recorrido humano completo de los tres cristales hasta victoria, caída al vacío y edición manual de un borde de chunk.
+This satisfies the 60 FPS desktop target in the tested environment. It is not equivalent to a mobile hardware benchmark.
 
-La cobertura estructural de estas rutas está implementada y pasó tipos/audit, pero no se las marca como aceptadas sin hardware o recorrido manual real.
+Profile of the environment expansion in the instrumented browser:
+
+- 18 chunks, 21 terrain draw calls (three liquid), and seven environment draw calls.
+- 14,570 terrain and liquid triangles; the environment uses merged geometry and fixed capacity.
+- Normal observed boot remesh: 3.9–4.4 ms; 10.7 ms peak with eight simultaneous WebGL tabs.
+- The instrumented browser limited both the full and minimal presets to 30.0 FPS / approximately 34.3 ms. Because both profiles hit the same limit, this run cannot certify 60 FPS desktop or attribute the limitation to the environment. The earlier 120 FPS desktop benchmark of the base template remains as evidence.
+- The available API did not expose a reliable GPU-memory measurement, so no estimate is reported.
+
+Production profile observed with the procedural third-person avatar:
+
+- 18 chunks, 21 terrain draw calls, seven environment draw calls, and 10 avatar/shadow draw calls.
+- 14,570 terrain triangles and a maximum boot remesh of 3.9 ms.
+- The instrumented browser recorded 32.6 average FPS and a 34.3 ms worst frame; this reflects the browser limit described above and does not certify mobile hardware.
+
+## Paths not physically tested
+
+- Pointer lock granted by an external browser.
+- Real simultaneous multitouch (joystick plus look plus action) and hardware `pointercancel`.
+- Physical gamepad, disconnection, and reconnection.
+- Gamepad `Y` and walk, run, jump, and landing animations with physical hardware.
+- Camera-boom collision against every boundary geometry through exhaustive human traversal; the implementation uses five voxel DDA rays and was visually inspected near the spawn and beacon.
+- Performance on a mid-range mobile phone.
+- Environment-expansion performance on desktop without the instrumented browser's 30 FPS cap.
+- Complete human traversal from all three crystals to victory, falling into the void, and manually editing a chunk boundary.
+
+Structural coverage for these paths is implemented and passed type checks and audit, but they are not marked as accepted without real hardware or a complete manual traversal.
+
+## Sandbox and procedural forest expansion — 2026-08-27
+
+### Gates and boot
+
+- `npm run check`: passed with strict TypeScript, file-size limits, and protected contracts.
+- `npm run build`: passed; only the informational warning for the PlayCanvas bundle above 1.5 MB remains.
+- Rabbit audit: 24 checks passed, 0 warnings.
+- The local skill passed an equivalent frontmatter validation. The official Python helper could not start on this host because its environment does not include PyYAML; no dependency was added to hide that limitation.
+- Production preview at `127.0.0.1:4174`: correct initial overlay and clean console, with one informational profile log.
+
+### Plug-and-play configuration
+
+- Final default verified: `content.preset: 'forest'` and `mission.active: 'none'`; no persistent objective is shown and no accidental victory is possible.
+- `minimal + none`: successful boot, three trees, 10 props, 0 collectibles, and two content draw calls.
+- `forest + beacon`: successful boot with the generic “Activate the beacon: 0/3” HUD; the beacon, sockets, and crystals are generated only for this mission.
+- `minimal + collect`: successful boot with the “Forest Collector: 0/8” HUD; the planner added eight apples even though the minimal preset declares 0 collectibles.
+- After temporary tests, the delivered configuration returned to `forest + none`.
+
+### Content and responsive behavior
+
+- Observed default profile: 32 chunks, 34 terrain draw calls (two liquid), five environment draw calls, five content draw calls, and 10 procedural-avatar draw calls in third person.
+- Default content: 17 editable voxel trees, 68 props or structures, and 20 collectibles; 27,114 terrain triangles and a maximum observed remesh of 3.8–4.4 ms.
+- Desktop visual inspection: sharp atlas, oak and pine trees visible from spawn, wood in the fifth slot, and sandbox mode without an objective overlay.
+- Inspection at `390×844`: centered six-slot hotbar, non-overlapping top actions, centered crosshair, and a correctly visible procedural avatar in third person.
+- Pause was verified with two captures taken 700 ms apart: identical bytes and a “The world is frozen” overlay, confirming that environment and content remained frozen.
+
+### Paths not manually certified in this expansion
+
+- Complete human traversal to every ruin, overlook, signpost, apple, and mushroom.
+- Manual collection of all eight units through `victory` and the `continue` variant.
+- A real user-driven fall into the void and respawn; configuration, types, and event composition cover the path.
+- Five restarts measured again with DOM instrumentation; the lifecycle reuses the same handles, but the earlier certification was not repeated here.
+- Physical multitouch and gamepad testing, and performance on mid-range mobile hardware.

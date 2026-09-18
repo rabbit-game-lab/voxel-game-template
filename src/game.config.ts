@@ -1,12 +1,19 @@
 import type { BlockKey } from './data/blocks'
 import type { AvatarConfig, CameraConfig } from './camera/config'
 import type { EnvironmentConfig } from './environment/config'
+import type { ContentConfig } from './content/config'
+import type { MissionConfig } from './sim/mission-config'
 
-type Vec2 = readonly [number, number]
 type Vec3 = readonly [number, number, number]
 
 export interface GameConfig {
-  session: { title: string; requiredCrystals: number; defeatY: number }
+  session: {
+    title: string
+    fallY: number
+    fallBehavior: 'respawn' | 'defeat'
+    respawn: { keepBlockInventory: boolean; keepCollectibles: boolean; keepWorldEdits: boolean }
+  }
+  mission: MissionConfig
   player: {
     bodyWidth: number; bodyHeight: number; eyeHeight: number
     moveSpeed: number; sprintMultiplier: number; acceleration: number
@@ -19,12 +26,13 @@ export interface GameConfig {
   world: {
     seed: number; min: Vec3; size: Vec3; spawn: Vec3
     plateauCenter: Vec3; beaconBase: Vec3
-    beaconSockets: readonly Vec3[]; crystalNodes: readonly Vec3[]; trees: readonly Vec2[]
+    beaconSockets: readonly Vec3[]; crystalNodes: readonly Vec3[]
     startingInventory: Readonly<Partial<Record<BlockKey, number>>>
   }
   interaction: { reach: number; breakInterval: number; placeCooldown: number }
   hud: { heartbeat: number }
   environment: EnvironmentConfig
+  content: ContentConfig
   visual: {
     topTint: number; sideTint: number; darkSideTint: number; bottomTint: number
     selection: string; socket: string
@@ -38,7 +46,18 @@ export interface GameConfig {
  * docs/game-config.md. Algorithms, asset paths and lifecycle do not belong here.
  */
 export const CONFIG = {
-  session: { title: 'Rabbit Voxel Lab', requiredCrystals: 3, defeatY: -8 },
+  session: {
+    title: 'Rabbit Voxel Lab', fallY: -8, fallBehavior: 'respawn',
+    respawn: { keepBlockInventory: true, keepCollectibles: true, keepWorldEdits: true },
+  },
+  mission: {
+    active: 'none',
+    definitions: {
+      none: { title: 'Modo libre' },
+      beacon: { title: 'Activá el faro', requiredCrystals: 3, onComplete: 'victory' },
+      collect: { title: 'Recolector del bosque', item: 'apple', required: 8, onComplete: 'victory' },
+    },
+  },
   player: {
     bodyWidth: 0.62, bodyHeight: 1.8, eyeHeight: 1.62,
     moveSpeed: 5.4, sprintMultiplier: 1.45, acceleration: 34,
@@ -81,12 +100,14 @@ export const CONFIG = {
   controls: { gamepadDeadZone: 0.17, fallbackDragThreshold: 7, touchSize: 126 },
   world: {
     seed: 1337,
-    min: [-24, 0, -24], size: [48, 32, 48], spawn: [0.5, 15, 0.5],
+    min: [-32, 0, -32], size: [64, 32, 64], spawn: [0.5, 15, 0.5],
     plateauCenter: [0, 13, 0], beaconBase: [4, 13, -3],
     beaconSockets: [[4, 14, -3], [5, 14, -3], [6, 14, -3]],
     crystalNodes: [[-9, 11, -6], [10, 9, -8], [3, 10, 13]],
-    trees: [[-20, 8], [12, 7], [-5, -13]],
-    startingInventory: { grass: 0, dirt: 12, stone: 8, planks: 8, crystal: 0, bedrock: 0 },
+    startingInventory: {
+      grass: 0, dirt: 12, stone: 8, planks: 8, wood: 0, crystal: 0,
+      bedrock: 0, leaves: 0, water: 0, air: 0,
+    },
   },
   interaction: { reach: 6, breakInterval: 0.18, placeCooldown: 0.15 },
   hud: { heartbeat: 0.25 },
@@ -125,11 +146,65 @@ export const CONFIG = {
       lakes: [{ id: 'spawn-lake', center: [-13, 7, 10], radius: [6, 5], shoreWidth: 2, edgeNoise: 0.18 }],
     },
     decorations: {
-      reeds: { enabled: true, count: 34, color: '#6d9d4d' },
-      rocks: { enabled: true, count: 18, color: '#7b8580' },
       particles: { enabled: true, count: 18, color: '#e8e58c' },
     },
     ambience: { enabled: true, volume: 0.018, waterInterval: [5, 9], windInterval: [8, 14] },
+  },
+  content: {
+    preset: 'forest',
+    interaction: { breakableDecorations: true, removeUnsupportedDecorations: true },
+    presets: {
+      forest: {
+        trees: {
+          oak: { enabled: true, count: 9, minSpacing: 4.5, height: [4, 6], zones: ['forest'] },
+          pine: { enabled: true, count: 6, minSpacing: 4.5, height: [6, 9], zones: ['forest', 'highland'] },
+          deadTree: { enabled: true, count: 2, minSpacing: 5, height: [4, 7], zones: ['highland', 'coast'] },
+        },
+        scatter: {
+          bushes: { enabled: true, count: 12, color: '#4f8f45', scale: [0.7, 1.2], zones: ['forest'] },
+          flowers: { enabled: true, count: 20, color: '#f2b6cb', scale: [0.75, 1.15], zones: ['spawn-meadow', 'forest'] },
+          reeds: { enabled: true, count: 18, color: '#6d9d4d', scale: [0.8, 1.25], zones: ['shore'] },
+          rocks: { enabled: true, count: 8, color: '#7b8580', scale: [0.75, 1.3], zones: ['shore', 'highland'] },
+          fallenLogs: { enabled: true, count: 4, color: '#745133', scale: [0.85, 1.2], zones: ['forest'] },
+          signposts: { enabled: true, count: 3, color: '#b77a43', scale: [0.9, 1.1], zones: ['spawn-meadow', 'forest'] },
+        },
+        landmarks: [
+          { id: 'forest-camp', archetype: 'campfire', center: [-8, -11], label: 'Campamento del Claro' },
+          { id: 'old-ruin', archetype: 'stone-ruin', center: [18, 11], label: 'Ruinas Antiguas' },
+          { id: 'rocky-overlook', archetype: 'rocky-overlook', center: [17, -16], label: 'Mirador Rocoso' },
+        ],
+        collectibles: {
+          apple: { enabled: true, count: 12, pickupRadius: 1.1, color: '#d94c43', scale: [0.85, 1.1], zones: ['forest'] },
+          mushroom: { enabled: true, count: 8, pickupRadius: 1.1, color: '#e48359', scale: [0.8, 1.2], zones: ['forest'] },
+        },
+        discoveries: { enabled: true, radius: 4.5, toastSeconds: 2.5 },
+      },
+      minimal: {
+        trees: {
+          oak: { enabled: true, count: 2, minSpacing: 6, height: [4, 5], zones: ['forest'] },
+          pine: { enabled: true, count: 1, minSpacing: 6, height: [6, 7], zones: ['highland'] },
+          deadTree: { enabled: false, count: 0, minSpacing: 6, height: [4, 5], zones: ['coast'] },
+        },
+        scatter: {
+          bushes: { enabled: false, count: 0, color: '#4f8f45', scale: [0.7, 1.2], zones: ['forest'] },
+          flowers: { enabled: true, count: 6, color: '#f2b6cb', scale: [0.75, 1.15], zones: ['spawn-meadow'] },
+          reeds: { enabled: false, count: 0, color: '#6d9d4d', scale: [0.8, 1.25], zones: ['shore'] },
+          rocks: { enabled: true, count: 4, color: '#7b8580', scale: [0.75, 1.3], zones: ['highland'] },
+          fallenLogs: { enabled: false, count: 0, color: '#745133', scale: [0.85, 1.2], zones: ['forest'] },
+          signposts: { enabled: false, count: 0, color: '#b77a43', scale: [0.9, 1.1], zones: ['spawn-meadow'] },
+        },
+        landmarks: [],
+        collectibles: {
+          apple: { enabled: false, count: 0, pickupRadius: 1.1, color: '#d94c43', scale: [0.85, 1.1], zones: ['forest'] },
+          mushroom: { enabled: false, count: 0, pickupRadius: 1.1, color: '#e48359', scale: [0.8, 1.2], zones: ['forest'] },
+        },
+        discoveries: { enabled: false, radius: 4.5, toastSeconds: 2.5 },
+      },
+    },
+    limits: {
+      maxTrees: 24, maxScatterInstances: 96, maxCollectibles: 32,
+      maxLandmarks: 8, maxExtraDrawCalls: 6,
+    },
   },
   visual: {
     topTint: 1, sideTint: 0.88, darkSideTint: 0.8, bottomTint: 0.65,

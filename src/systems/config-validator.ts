@@ -2,6 +2,7 @@ import { BLOCKS, isBlockKey } from '../data/blocks'
 import type { LakeConfig } from '../environment/config'
 import type { GameConfig } from '../game.config'
 import { CHUNK_SIZE } from '../voxel/constants'
+import { validateContentConfig } from './config-validator-content'
 
 function finite(value: number): boolean {
   return Number.isFinite(value)
@@ -82,8 +83,6 @@ export function validateConfig(config: GameConfig, modelKeys: readonly string[] 
     stars: environment.sky.stars.color,
     water: environment.water.color,
     shallowWater: environment.water.shallowColor,
-    reeds: environment.decorations.reeds.color,
-    rocks: environment.decorations.rocks.color,
     particles: environment.decorations.particles.color,
     selection: config.visual.selection,
     socket: config.visual.socket,
@@ -199,11 +198,11 @@ export function validateConfig(config: GameConfig, modelKeys: readonly string[] 
       errors.push(`world.size[${index}] must be a positive multiple of ${CHUNK_SIZE}`)
     }
   }
-  if (config.world.beaconSockets.length !== config.session.requiredCrystals) {
-    errors.push('beaconSockets length must equal session.requiredCrystals')
+  if (config.world.beaconSockets.length !== config.mission.definitions.beacon.requiredCrystals) {
+    errors.push('beaconSockets length must equal mission beacon requiredCrystals')
   }
-  if (config.world.crystalNodes.length !== config.session.requiredCrystals) {
-    errors.push('crystalNodes length must equal session.requiredCrystals')
+  if (config.world.crystalNodes.length !== config.mission.definitions.beacon.requiredCrystals) {
+    errors.push('crystalNodes length must equal mission beacon requiredCrystals')
   }
   const contains = (point: readonly [number, number, number]): boolean =>
     point.every((value, index) => value >= config.world.min[index] &&
@@ -256,14 +255,9 @@ export function validateConfig(config: GameConfig, modelKeys: readonly string[] 
     }
   }
 
-  for (const [label, spec, max] of [
-    ['reeds', environment.decorations.reeds, 64],
-    ['rocks', environment.decorations.rocks, 32],
-    ['particles', environment.decorations.particles, 24],
-  ] as const) {
-    if (!Number.isInteger(spec.count) || spec.count < 0 || spec.count > max) {
-      errors.push(`environment.decorations.${label}.count must be an integer in [0, ${max}]`)
-    }
+  const particles = environment.decorations.particles
+  if (!Number.isInteger(particles.count) || particles.count < 0 || particles.count > 24) {
+    errors.push('environment.decorations.particles.count must be an integer in [0, 24]')
   }
   for (const [label, interval] of [
     ['waterInterval', environment.ambience.waterInterval],
@@ -286,5 +280,6 @@ export function validateConfig(config: GameConfig, modelKeys: readonly string[] 
   for (const [label, volume] of Object.entries(config.audio)) {
     if (!finite(volume) || volume < 0 || volume > 1) errors.push(`audio.${label} must be in [0, 1]`)
   }
+  errors.push(...validateContentConfig(config))
   if (errors.length > 0) throw new Error(`Invalid game config:\n- ${errors.join('\n- ')}`)
 }

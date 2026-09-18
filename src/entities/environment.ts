@@ -3,7 +3,7 @@ import type { TimeOfDay } from '../environment/config'
 import type { GameConfig } from '../game.config'
 import type { PlayerState } from '../sim/types'
 import type { VoxelWorld } from '../voxel/world'
-import { createDecorationFeature, createParticleFeature } from './environment-decorations'
+import { createParticleFeature } from './environment-decorations'
 import { createSkyFeature } from './environment-sky'
 import {
   addBox, builder, createMesh, renderMesh, rgb, seededRandom, vertexMaterial, type MeshBuilder,
@@ -20,8 +20,6 @@ export interface FeatureContext {
 export interface EnvironmentFeatureStats {
   drawCalls: number
   clouds: number
-  reeds: number
-  rocks: number
   particles: number
 }
 
@@ -39,7 +37,7 @@ export interface EnvironmentHandle {
   reset(): void
   setPaused(paused: boolean): void
   setTimeOfDay(mode: TimeOfDay): void
-  stats(): { drawCalls: number; clouds: number; reeds: number; rocks: number; particles: number }
+  stats(): { drawCalls: number; clouds: number; particles: number }
   destroy(): void
 }
 
@@ -47,7 +45,7 @@ function featureStats(
   drawCalls: number,
   counts: Partial<Omit<EnvironmentFeatureStats, 'drawCalls'>> = {},
 ): EnvironmentFeatureStats {
-  return { drawCalls, clouds: 0, reeds: 0, rocks: 0, particles: 0, ...counts }
+  return { drawCalls, clouds: 0, particles: 0, ...counts }
 }
 
 function addCloud(data: MeshBuilder, x: number, y: number, z: number, scale: number): void {
@@ -105,7 +103,7 @@ function createCloudFeature(context: FeatureContext): EnvironmentFeature | null 
   }
 }
 
-const FEATURE_FACTORIES = [createSkyFeature, createCloudFeature, createDecorationFeature, createParticleFeature]
+const FEATURE_FACTORIES = [createSkyFeature, createCloudFeature, createParticleFeature]
 
 export function createEnvironment(
   app: pc.Application,
@@ -129,8 +127,6 @@ export function createEnvironment(
         const current = feature.stats()
         total.drawCalls += current.drawCalls
         total.clouds += current.clouds
-        total.reeds += current.reeds
-        total.rocks += current.rocks
         total.particles += current.particles
       }
       return total

@@ -1,47 +1,47 @@
-# Ambiente configurable
+# Configurable environment
 
-`CONFIG.environment` en `src/game.config.ts` es el único contrato público del ambiente. Una AI puede cambiar presets sin conocer PlayCanvas, el mesher o el lifecycle Rabbit. La validación falla antes del boot si un valor excede límites o un lago invade landmarks protegidos.
+`CONFIG.environment` in `src/game.config.ts` is the environment's only public contract. An AI can change presets without knowing PlayCanvas, the mesher, or the Rabbit lifecycle. Validation fails before boot if a value exceeds a limit or a lake overlaps protected landmarks.
 
-## Cielo y hora visual
+## Sky and visual time of day
 
-El sistema ofrece dos presets coordinados, `day` y `night`. No simula el paso del tiempo: cambiar de modo activa recursos ya creados y actualiza cielo, sol/luna, estrellas, luz, niebla, nubes, terreno y agua sin regenerar chunks.
+The system provides two coordinated presets, `day` and `night`. It does not simulate the passage of time: switching modes activates resources that already exist and updates the sky, sun or moon, stars, light, fog, clouds, terrain, and water without regenerating chunks.
 
-Para hacer que el juego arranque siempre de noche:
+To make the game always start at night:
 
 ```ts
 sky: {
   initialMode: 'night',
   showToggleButton: false,
-  presets: { /* conservar day y night */ },
-  stars: { /* conservar configuración válida */ },
+  presets: { /* keep day and night */ },
+  stars: { /* keep a valid configuration */ },
 }
 ```
 
-`initialMode` es la única modificación necesaria para pedidos como “hacé que el juego sea de noche”. `showToggleButton: false` retira el botón temporal sin desactivar el sistema. Si se conserva en `true`, el botón ☾/☀ aparece junto a pausa durante el juego.
+`initialMode` is the only change required for requests such as “make the game take place at night.” `showToggleButton: false` removes the temporary button without disabling the system. When set to `true`, the moon/sun button appears next to Pause during gameplay.
 
-Cada preset incluye:
+Each preset includes:
 
-- `zenith`, `horizon`, `ambient` y `fogColor` para la atmósfera.
-- `fogStart/fogEnd` para visibilidad.
-- `celestialColor`, `celestialEuler` y `celestialScale` para sol o luna.
-- `lightColor/lightIntensity` para la luz direccional.
-- `cloudColor`, `worldTint` y `waterTint` para que el resto de la escena acompañe el modo.
+- `zenith`, `horizon`, `ambient`, and `fogColor` for the atmosphere.
+- `fogStart/fogEnd` for visibility.
+- `celestialColor`, `celestialEuler`, and `celestialScale` for the sun or moon.
+- `lightColor/lightIntensity` for directional lighting.
+- `cloudColor`, `worldTint`, and `waterTint` so the rest of the scene matches the mode.
 
-Las estrellas se generan una vez usando `count`, `seedOffset`, `color` y `size`; sólo se dibujan de noche. El límite es 96.
+Stars are generated once using `count`, `seedOffset`, `color`, and `size`, and are rendered only at night. The limit is 96.
 
-### Recetas AI
+### AI recipes
 
-- “Hacé que siempre sea de noche”: cambiar sólo `initialMode` a `night`.
-- “Sacá el botón día/noche”: cambiar sólo `showToggleButton` a `false`.
-- “Hacé una noche más oscura”: ajustar el preset `night`, especialmente `zenith`, `horizon`, `worldTint` y `fogColor`.
-- “Creá un atardecer”: modificar el preset `day` con horizonte cálido, cuerpo celeste bajo y niebla coordinada.
-- “Quiero más estrellas”: subir `stars.count` sin superar 96; no crear una entidad por estrella.
+- “Make it always nighttime”: change only `initialMode` to `night`.
+- “Remove the day/night button”: change only `showToggleButton` to `false`.
+- “Make the night darker”: adjust the `night` preset, especially `zenith`, `horizon`, `worldTint`, and `fogColor`.
+- “Create a sunset”: modify the `day` preset with a warm horizon, a low celestial body, and coordinated fog.
+- “I want more stars”: increase `stars.count` without exceeding 96; do not create one entity per star.
 
-Usar siempre colores hex de seis dígitos. Mantener `fogStart < fogEnd` y el final por debajo o cerca de `camera.farClip`.
+Always use six-digit hex colors. Keep `fogStart < fogEnd`, with the end value below or near `camera.farClip`.
 
-## Mover o agregar lagos
+## Moving or adding lakes
 
-Cada lago se define así:
+Each lake is defined as follows:
 
 ```ts
 {
@@ -53,50 +53,44 @@ Cada lago se define así:
 }
 ```
 
-`center[1]` es el voxel de agua; su superficie se renderiza en `y + 1 - surfaceInset`. Elegir un `id` estable: forma parte de la deformación determinista. La costa completa debe caber dentro del mundo y quedar separada de spawn, meseta, faro, sockets y cristales. Para varios lagos, agregar objetos a `water.lakes`; el generador, restauración de agua y decoraciones los detectan automáticamente.
+`center[1]` is the water voxel's Y coordinate; its surface is rendered at `y + 1 - surfaceInset`. Choose a stable `id` because it participates in deterministic deformation. The entire shore must fit within the world and remain separate from the spawn, plateau, beacon, sockets, and crystals. To create multiple lakes, add objects to `water.lakes`; the generator, water restoration, and decorations detect them automatically.
 
-## Desactivar features
+## Disabling features
 
-Cambiar sólo el `enabled` correspondiente:
+Change only the corresponding `enabled` value:
 
 ```ts
 clouds: { enabled: false, ... },
 water: { enabled: false, ... },
 decorations: {
-  reeds: { enabled: false, ... },
-  rocks: { enabled: true, ... },
   particles: { enabled: false, ... },
 },
 ambience: { enabled: false, ... },
 ```
 
-Los valores siguen validándose aunque una feature esté apagada, de modo que volver a activarla sea seguro. El agua desactivada no se genera ni afecta movimiento; las categorías de decoración conservan toggles propios.
+Values are still validated when a feature is disabled so that re-enabling it remains safe. Disabled water is neither generated nor considered by movement. Reeds, rocks, flowers, and bushes are configured in `CONFIG.content`.
 
-## Densidad y presupuesto
+## Density and performance budget
 
-- Nubes: hasta 16 sumando todas las capas; cada capa cuesta un draw call.
-- Juncos: hasta 64, combinados en una malla.
-- Piedras: hasta 32, combinadas en una malla.
-- Partículas: hasta 24 dentro de un único sistema de capacidad fija.
-- Agua: usa un material compartido y como máximo un draw call adicional por chunk que contenga caras líquidas.
+- Clouds: up to 16 across all layers; each layer costs one draw call.
+- Particles: up to 24 within one fixed-capacity system.
+- Water: one shared material and at most one additional draw call per chunk containing liquid faces.
 
-Para un preset móvil, reducir primero partículas y nubes; después juncos y piedras. No crear entidades por prop ni materiales por lago.
+For a mobile preset, reduce particles and clouds first, then use `content.preset: 'minimal'`. Do not create entities per prop or materials per lake.
 
-## Preset mínimo
+## Minimal preset
 
-Para conservar sólo cielo y terreno:
+To keep only the sky and terrain:
 
 ```ts
 clouds: { enabled: false, seedOffset: 7001, layers: [] },
-water: { enabled: false, /* conservar colores/rangos válidos */ lakes: [] },
+water: { enabled: false, /* keep valid colors/ranges */ lakes: [] },
 decorations: {
-  reeds: { enabled: false, count: 0, color: '#6d9d4d' },
-  rocks: { enabled: false, count: 0, color: '#7b8580' },
   particles: { enabled: false, count: 0, color: '#e8e58c' },
 },
 ambience: { enabled: false, volume: 0, waterInterval: [5, 9], windInterval: [8, 14] },
 ```
 
-## Extender el sistema
+## Extending the system
 
-Una feature nueva implementa internamente `update`, `reset`, `setPaused`, `setTimeOfDay`, `destroy` y `stats`, y se registra en `FEATURE_FACTORIES`. Sólo su configuración tipada y validada se expone en `game.config.ts`; no se modifica el loop principal. Mantener geometría combinada, capacidad fija, determinismo por seed y recursos reutilizables entre restarts.
+A new feature internally implements `update`, `reset`, `setPaused`, `setTimeOfDay`, `destroy`, and `stats`, then registers itself in `FEATURE_FACTORIES`. Only its typed, validated configuration is exposed in `game.config.ts`; the main loop remains unchanged. Keep geometry merged, capacity fixed, generation deterministic by seed, and resources reusable across restarts.

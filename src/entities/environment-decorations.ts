@@ -1,105 +1,15 @@
 import * as pc from 'playcanvas'
-import type { LakeConfig } from '../environment/config'
-import { lakeSignedDistance } from '../environment/lakes'
-import type { GameConfig } from '../game.config'
 import type { EnvironmentFeature, EnvironmentFeatureStats, FeatureContext } from './environment'
-import { addBox, builder, createMesh, renderMesh, rgb, seededRandom, vertexMaterial } from './environment-geometry'
+import { rgb } from './environment-geometry'
 
-interface ShoreCell { x: number; z: number; lake: LakeConfig }
-
-function stats(
-  drawCalls: number,
-  counts: Partial<Omit<EnvironmentFeatureStats, 'drawCalls'>> = {},
-): EnvironmentFeatureStats {
-  return { drawCalls, clouds: 0, reeds: 0, rocks: 0, particles: 0, ...counts }
-}
-
-function shoreCells(config: GameConfig, min: number, max: number): ShoreCell[] {
-  const result: ShoreCell[] = []
-  for (const lake of config.environment.water.lakes) {
-    const rx = Math.ceil(lake.radius[0] + lake.shoreWidth)
-    const rz = Math.ceil(lake.radius[1] + lake.shoreWidth)
-    for (let z = lake.center[2] - rz; z <= lake.center[2] + rz; z += 1) {
-      for (let x = lake.center[0] - rx; x <= lake.center[0] + rx; x += 1) {
-        const distance = lakeSignedDistance(lake, x, z, config.world.seed)
-        if (distance >= min && distance <= max) result.push({ x, z, lake })
-      }
-    }
-  }
-  return result
-}
-
-function selectCells(cells: ShoreCell[], count: number, random: () => number): ShoreCell[] {
-  const copy = [...cells]
-  for (let index = copy.length - 1; index > 0; index -= 1) {
-    const other = Math.floor(random() * (index + 1)); [copy[index], copy[other]] = [copy[other], copy[index]]
-  }
-  return copy.slice(0, Math.min(count, copy.length))
-}
-
-export function createDecorationFeature(context: FeatureContext): EnvironmentFeature | null {
-  const specs = context.config.environment.decorations
-  if (!context.config.environment.water.enabled || context.config.environment.water.lakes.length === 0) return null
-  const root = new pc.Entity('Shore Decorations')
-  context.root.addChild(root)
-  const random = seededRandom(context.config.world.seed + 4103)
-  const resources: { mesh: pc.Mesh; material: pc.Material }[] = []
-  let drawCalls = 0
-  let reedCount = 0
-  let rockCount = 0
-  if (specs.reeds.enabled && specs.reeds.count > 0) {
-    const data = builder()
-    const cells = selectCells(shoreCells(context.config, -1.2, 0.35), specs.reeds.count, random)
-    reedCount = cells.length
-    for (const cell of cells) {
-      const height = 0.72 + random() * 0.62
-      const y = cell.lake.center[1] + height * 0.5
-      addBox(data, [cell.x + 0.35, y, cell.z + 0.48], [0.11, height, 0.11], rgb(specs.reeds.color))
-      addBox(data, [cell.x + 0.64, y - 0.08, cell.z + 0.58], [0.1, height * 0.82, 0.1], rgb(specs.reeds.color))
-    }
-    if (data.positions.length > 0) {
-      const mesh = createMesh(context.app.graphicsDevice, data)
-      const material = vertexMaterial(false)
-      renderMesh('Merged Reeds', root, mesh, material)
-      resources.push({ mesh, material }); drawCalls += 1
-    }
-  }
-  if (specs.rocks.enabled && specs.rocks.count > 0) {
-    const data = builder()
-    for (const cell of selectCells(shoreCells(context.config, 0.35, 2.2), specs.rocks.count, random)) {
-      const ground = context.world.highestSolidY(cell.x, cell.z)
-      if (ground === null) continue
-      rockCount += 1
-      const size = 0.28 + random() * 0.34
-      addBox(data, [cell.x + 0.5, ground + size * 0.34, cell.z + 0.5], [size, size * 0.68, size * 0.82], rgb(specs.rocks.color))
-    }
-    if (data.positions.length > 0) {
-      const mesh = createMesh(context.app.graphicsDevice, data)
-      const material = vertexMaterial(false)
-      renderMesh('Merged Shore Rocks', root, mesh, material)
-      resources.push({ mesh, material }); drawCalls += 1
-    }
-  }
-  if (drawCalls === 0) { root.destroy(); return null }
-  const setTimeOfDay = (mode: 'day' | 'night'): void => {
-    const tint = rgb(context.config.environment.sky.presets[mode].worldTint)
-    for (const { material } of resources) {
-      const standard = material as pc.StandardMaterial
-      standard.emissive.set(tint[0] / 255, tint[1] / 255, tint[2] / 255)
-      standard.update()
-    }
-  }
-  setTimeOfDay(context.config.environment.sky.initialMode)
-  return {
-    update() {}, reset() {}, setPaused() {},
-    setTimeOfDay,
-    stats: () => stats(drawCalls, { reeds: reedCount, rocks: rockCount }),
-    destroy() { root.destroy(); resources.forEach(({ mesh, material }) => { mesh.destroy(); material.destroy() }) },
-  }
+function particleStats(count: number): EnvironmentFeatureStats {
+  return { drawCalls: 1, clouds: 0, particles: count }
 }
 
 function createParticleTexture(device: pc.GraphicsDevice): pc.Texture {
-  const texture = new pc.Texture(device, { width: 4, height: 4, format: pc.PIXELFORMAT_SRGBA8, mipmaps: false })
+  const texture = new pc.Texture(device, {
+    width: 4, height: 4, format: pc.PIXELFORMAT_SRGBA8, mipmaps: false,
+  })
   texture.minFilter = pc.FILTER_NEAREST; texture.magFilter = pc.FILTER_NEAREST
   const pixels = texture.lock() as Uint8Array
   pixels.fill(0)
@@ -132,7 +42,7 @@ export function createParticleFeature(context: FeatureContext): EnvironmentFeatu
     reset() { root.particlesystem?.reset(); root.particlesystem?.play() },
     setPaused(paused) { if (paused) root.particlesystem?.pause(); else root.particlesystem?.unpause() },
     setTimeOfDay() {},
-    stats: () => stats(1, { particles: spec.count }),
+    stats: () => particleStats(spec.count),
     destroy() { root.destroy(); texture.destroy() },
   }
 }

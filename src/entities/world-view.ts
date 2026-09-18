@@ -20,7 +20,7 @@ export interface WorldViewHandle {
   markDirty(coords: readonly ChunkCoord[]): void
   update(): void
   setSelection(voxel: VoxelCoord | null): void
-  setSockets(occupied: readonly boolean[]): void
+  setSockets(occupied: readonly boolean[], visible?: boolean): void
   setTimeOfDay(mode: TimeOfDay): void
   stats(): {
     chunks: number; faces: number; liquidFaces: number; triangles: number
@@ -202,8 +202,8 @@ export function createWorldView(
       selection.enabled = voxel !== null
       if (voxel) selection.setLocalPosition(voxel.x + 0.5, voxel.y + 0.5, voxel.z + 0.5)
     },
-    setSockets(occupied) {
-      socketMarkers.forEach((marker, index) => { marker.enabled = !occupied[index] })
+    setSockets(occupied, visible = true) {
+      socketMarkers.forEach((marker, index) => { marker.enabled = visible && !occupied[index] })
     },
     setTimeOfDay,
     stats() {
