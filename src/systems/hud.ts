@@ -31,6 +31,9 @@ const CSS = `
     font-size:13px;white-space:nowrap}
   .v-notice[data-kind="discovery"]{background:#31504be8;border-color:#93f2e6}
   .v-notice[data-kind="respawn"]{background:#3d4c67e8;border-color:#dbe9ff}
+  .v-notice[data-kind="combat"]{background:#602f35e8;border-color:#ffb0a8}
+  .v-health{position:absolute;left:14px;top:14px;padding:8px 11px;border:2px solid #eddfaa;
+    background:#203b38e8;border-radius:4px;color:#ff8178;letter-spacing:3px;font-size:19px}
   .v-crosshair{position:absolute;left:50%;top:50%;width:20px;height:20px;transform:translate(-50%,-50%)}
   .v-crosshair:before,.v-crosshair:after{content:"";position:absolute;background:#fff;box-shadow:0 1px 0 #16231f}
   .v-crosshair:before{width:4px;height:20px;left:8px}.v-crosshair:after{width:20px;height:4px;top:8px}
@@ -58,7 +61,7 @@ const CSS = `
     border-radius:3px;box-shadow:0 5px 0 #793f28;text-transform:uppercase;letter-spacing:.08em}
   .v-hints{position:absolute;left:14px;bottom:14px;padding:8px 10px;background:#10201dbd;border-left:3px solid #e3d39e;
     font-size:11px;line-height:1.45;max-width:220px}
-  @media(max-width:700px),(pointer:coarse){.v-objective{top:9px;left:8px;transform:none;font-size:13px}.v-notice{top:61px;font-size:12px}.v-actions{top:8px;right:8px;gap:7px}
+  @media(max-width:700px),(pointer:coarse){.v-objective{top:9px;left:8px;transform:none;font-size:13px}.v-notice{top:61px;font-size:12px}.v-health{left:8px;top:55px;font-size:15px}.v-actions{top:8px;right:8px;gap:7px}
     .v-hotbar{bottom:92px;gap:3px}.v-slot{width:46px;height:46px}.v-swatch{width:22px;height:22px}
     .v-hints{display:none}}
   @media(max-width:390px){.v-slot{width:42px;height:42px}.v-hotbar{bottom:84px}.v-objective{font-size:11px}}
@@ -71,7 +74,7 @@ const SWATCHES: Record<string, string> = {
 
 export function createHud(container: HTMLElement, config: GameConfig, actions: HudActions): HudHandle {
   container.innerHTML = `<div class="voxel-ui"><style>${CSS}</style>
-    <div class="v-objective"></div><div class="v-notice"></div><div class="v-crosshair"></div><div class="v-target"></div>
+    <div class="v-objective"></div><div class="v-notice"></div><div class="v-health"></div><div class="v-crosshair"></div><div class="v-target"></div>
     <div class="v-hotbar"></div><div class="v-actions">
       <button class="v-time" aria-label="Cambiar a modo noche">☾</button>
       <button class="v-camera" aria-label="Cambiar a tercera persona">3P</button>
@@ -80,6 +83,7 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
   const root = container.firstElementChild as HTMLElement
   const objective = root.querySelector('.v-objective') as HTMLElement
   const notice = root.querySelector('.v-notice') as HTMLElement
+  const health = root.querySelector('.v-health') as HTMLElement
   const target = root.querySelector('.v-target') as HTMLElement
   const hotbar = root.querySelector('.v-hotbar') as HTMLElement
   const overlay = root.querySelector('.v-overlay') as HTMLElement
@@ -134,6 +138,9 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
       notice.textContent = snapshot.notice?.text ?? ''
       notice.dataset.kind = snapshot.notice?.kind ?? ''
       notice.style.display = snapshot.notice && snapshot.phase === 'playing' && !snapshot.paused ? 'block' : 'none'
+      health.textContent = snapshot.health
+        ? `${'♥'.repeat(snapshot.health.current)}${'♡'.repeat(snapshot.health.max - snapshot.health.current)}` : ''
+      health.style.display = snapshot.health && snapshot.phase === 'playing' ? 'block' : 'none'
       const nextMode = snapshot.timeOfDay === 'day' ? 'noche' : 'día'
       timeButton.textContent = snapshot.timeOfDay === 'day' ? '☾' : '☀'
       timeButton.setAttribute('aria-label', `Cambiar a modo ${nextMode}`)
@@ -167,7 +174,7 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
       crosshair.style.display = playing ? 'block' : 'none'
     },
     showError(message) {
-      objective.style.display = 'none'; notice.style.display = 'none'; target.style.display = 'none'; hotbar.style.display = 'none'
+      objective.style.display = 'none'; notice.style.display = 'none'; health.style.display = 'none'; target.style.display = 'none'; hotbar.style.display = 'none'
       actionRow.style.display = 'none'; crosshair.style.display = 'none'
       hints.style.display = 'none'
       overlay.style.display = 'flex'

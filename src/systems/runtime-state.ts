@@ -9,6 +9,7 @@ import type { GameSession } from '../sim/session'
 import type { InputSnapshot, SimInput } from '../sim/types'
 import type { AudioHandle } from './audio'
 import type { InputHandle } from './input'
+import type { CreaturesHandle } from '../entities/creatures'
 
 export interface RuntimeState {
   session: GameSession
@@ -18,6 +19,7 @@ export interface RuntimeState {
   effects: EffectsHandle
   environment: EnvironmentHandle
   content: ContentHandle
+  creatures: CreaturesHandle
   input: InputHandle
   audio: AudioHandle
   pause: PauseHandle

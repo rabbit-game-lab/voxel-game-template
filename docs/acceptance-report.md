@@ -1,5 +1,13 @@
 # Acceptance report
 
+## Plug-and-play creatures — 2026-09-18
+
+- Added a deterministic procedural catalog containing seven animals, four enemies, and two character archetypes; no new downloads, dependencies, or third-party files were introduced.
+- The default `peacefulForest` preset booted with nine active creatures across six species and nine creature draw calls. The console reported 32 chunks, 34 terrain draw calls, five environment draw calls, five content draw calls, and no warnings or errors.
+- Built-in aliases, complete presets, behavior overrides, combat limits, population limits, and the missing-species workflow are documented in English.
+- `npm run check`, `npm run build`, and the Rabbit template audit passed. The build retained only Vite's existing informational PlayCanvas bundle-size warning.
+- Codex's embedded browser loaded the entry scene and visibly rendered nearby procedural animals. Pointer lock was rejected by that browser as expected, so live movement, hostile combat, physical touch, and gamepad paths remain manual acceptance paths.
+
 ## Breakable, support-aware decorations — 2026-09-18
 
 - Merged bushes, flowers, reeds, rocks, signposts, and campfires now participate in center-ray targeting through engine-independent bounds while remaining non-colliding and batched by category.

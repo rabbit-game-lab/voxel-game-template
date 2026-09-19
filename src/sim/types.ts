@@ -5,12 +5,13 @@ import type { ChunkCoord, VoxelCoord } from '../voxel/coords'
 import type { RayHit } from '../voxel/raycast'
 import type { CollectibleKey } from '../content/config'
 import type { DecorationHit } from '../content/types'
+import type { CreatureHit } from '../creatures/types'
 import type { MissionSnapshot } from './mission'
 
 export type GamePhase = 'focus' | 'playing' | 'victory' | 'defeat'
 export type InputDevice = 'keyboard' | 'touch' | 'gamepad'
 export type SoundType = 'jump' | 'splash' | 'break' | 'place' | 'crystal' | 'pickup' |
-  'discovery' | 'respawn' | 'invalid' | 'victory' | 'defeat'
+  'discovery' | 'respawn' | 'invalid' | 'victory' | 'defeat' | 'creatureHit' | 'creatureDefeat' | 'playerHurt'
 
 export interface InputSnapshot {
   moveX: number
@@ -60,7 +61,8 @@ export interface HudSnapshot {
   cameraMode: CameraMode
   timeOfDay: TimeOfDay
   mission: MissionSnapshot | null
-  notice: { text: string; kind: 'pickup' | 'discovery' | 'respawn' | 'mission' } | null
+  notice: { text: string; kind: 'pickup' | 'discovery' | 'respawn' | 'mission' | 'combat' } | null
+  health: { current: number; max: number } | null
   slots: readonly HudSlot[]
   device: InputDevice
   hasTarget: boolean
@@ -74,6 +76,7 @@ export type GameEvent =
   | { type: 'decoration'; index: number; reason: 'break' | 'unsupported'; position: VoxelCoord }
   | { type: 'reset'; world: boolean }
   | { type: 'respawn' }
+  | { type: 'creature'; index: number; action: 'hit' | 'defeat'; position: VoxelCoord }
   | { type: 'phase'; phase: GamePhase }
 
 export interface AimRay {
@@ -97,5 +100,6 @@ export interface AvatarRenderState {
 export interface TargetSnapshot {
   hit: RayHit | null
   decoration: DecorationHit | null
+  creature: CreatureHit | null
   label: string
 }

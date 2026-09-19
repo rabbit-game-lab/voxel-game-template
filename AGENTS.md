@@ -51,10 +51,12 @@ src/
     config.ts             Environment types consumed by CONFIG.environment.
     lakes.ts              Deterministic lake membership rules.
   content/                Presets, deterministic plans, archetypes, prop targeting.
+  creatures/              Species catalog, aliases, preset contract, deterministic spawns.
   sim/                    Engine-agnostic fixed-step gameplay.
     types.ts              InputSnapshot, phases, session types.
     player.ts             Movement, wading, collision vs voxels (no physics engine).
     session.ts            Inventory, editing, missions, pickups, respawn.
+    creatures.ts          Engine-independent behavior, movement, targeting and combat.
   entities/               PlayCanvas render layer (reads sim state, never mutates it).
     scene.ts              Lights, fog, camera entity.
     world-view.ts         Chunk entity pool, opaque + liquid meshes, remesh budget.
@@ -62,6 +64,7 @@ src/
     player-avatar.ts      Procedural or imported avatar mirror.
     environment.ts        Sky, clouds, water, shore props factory registry.
     content.ts            Merged procedural props and collectible meshes.
+    creatures.ts          Shared species meshes and one visual root per moving creature.
     effects.ts            Break/place particles.
     helpers.ts            Materials and primitive helpers.
   systems/
@@ -92,6 +95,7 @@ ranges live in `docs/game-config.md`.
 | Reach, break/place cadence | `CONFIG.interaction` |
 | Sky, day/night, lakes, clouds, ambience | `CONFIG.environment` |
 | Forest/minimal density, colors, landmarks, collectibles | `CONFIG.content` |
+| Animals, enemies, NPCs, behavior and combat | `CONFIG.creatures` |
 | Sandbox/beacon/collect objective | `CONFIG.mission` |
 | Block tints, selection colors | `CONFIG.visual` |
 | Volumes | `CONFIG.audio` |
@@ -112,9 +116,10 @@ fork movement physics per camera mode.
 8. **Environment visuals** → factories under `src/entities/environment*.ts`; register in `environment.ts`.
 9. **Trees, props, landmarks, pickups** → `src/content/` planning plus merged rendering in `src/entities/content.ts`.
 10. **Controls / pointer lock** → `src/systems/input.ts` and `src/systems/pointer-lock.ts`.
-11. **HUD copy and layout** → `src/systems/hud.ts` only.
-12. **Sounds** → `src/systems/audio.ts` over the SDK `sound` module.
-13. **Art** → `public/assets/` + `src/data/assets.ts`; Quaternius provenance in `THIRD_PARTY.md`.
+11. **Creatures** → config in `game.config.ts`, species/aliases in `src/creatures/catalog.ts`, simulation in `src/sim/creatures.ts`, visuals in `src/entities/creatures.ts`.
+12. **HUD copy and layout** → `src/systems/hud.ts` only.
+13. **Sounds** → `src/systems/audio.ts` over the SDK `sound` module.
+14. **Art** → `public/assets/` + `src/data/assets.ts`; Quaternius provenance in `THIRD_PARTY.md`.
 
 **Before writing a system for X, check whether an SDK module already does it.**
 They live in `src/rabbit/`, are never edited, and each file's header lists the
@@ -153,6 +158,7 @@ true`, so `requestPointerLock` is allowed; the adapter lives in
   for break targeting and remove decorations when their supporting voxel breaks.
 - Water stays non-solid, non-raycastable, replaceable, and off the hotbar.
 - Pause and end states block simulation, editing, scoring, and session audio.
+- Creature presets remain deterministic. Procedural species share one mesh per species; do not add rigidbodies, DOM, or listeners per creature.
 - `main.ts` depends on one game-owned export: `setupGame(app)` in `systems/loop.ts`
   returning `{ restart, setMuted }`.
 
@@ -218,5 +224,6 @@ hero.play('run')
 2. **New blocks**: append IDs in `blocks.ts`, add tiles, extend hotbar/inventory rules in `session.ts`.
 3. **New environment feature**: add a factory implementing `update/reset/setPaused/setTimeOfDay/destroy` and register it in `entities/environment.ts`.
 4. **New win condition or mode**: extend `sim/session.ts` phases and HUD in `systems/hud.ts`; keep sim free of PlayCanvas imports.
-5. **Performance**: respect `CONFIG.performance.maxChunkRebuildsPerFrame`; pool fragments and reuse chunk entities.
-6. **Kit updates**: after pulling kit changes, run `sync-sdk` and `sync-check` from `rabbit-game-kit`; never patch vendored files by hand.
+5. **New creature**: register its stable key, aliases, bounds and defaults in `creatures/catalog.ts`, reuse/add a procedural archetype, then expose it only through `CONFIG.creatures`.
+6. **Performance**: respect `CONFIG.performance.maxChunkRebuildsPerFrame`; pool fragments and reuse chunk entities.
+7. **Kit updates**: after pulling kit changes, run `sync-sdk` and `sync-check` from `rabbit-game-kit`; never patch vendored files by hand.

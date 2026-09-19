@@ -3,6 +3,7 @@ import type { LakeConfig } from '../environment/config'
 import type { GameConfig } from '../game.config'
 import { CHUNK_SIZE } from '../voxel/constants'
 import { validateContentConfig } from './config-validator-content'
+import { validateCreaturesConfig } from './config-validator-creatures'
 
 function finite(value: number): boolean {
   return Number.isFinite(value)
@@ -281,5 +282,6 @@ export function validateConfig(config: GameConfig, modelKeys: readonly string[] 
     if (!finite(volume) || volume < 0 || volume > 1) errors.push(`audio.${label} must be in [0, 1]`)
   }
   errors.push(...validateContentConfig(config))
+  errors.push(...validateCreaturesConfig(config))
   if (errors.length > 0) throw new Error(`Invalid game config:\n- ${errors.join('\n- ')}`)
 }

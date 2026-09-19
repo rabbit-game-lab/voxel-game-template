@@ -66,6 +66,15 @@ export function createGameAudio(config: GameConfig): AudioHandle {
         case 'defeat':
           sound.tone({ freq: 260, slideTo: 70, duration: 0.5, type: 'sawtooth', volume: 0.03 })
           break
+        case 'creatureHit':
+          sound.noise({ duration: 0.08, filter: 'bandpass', freq: 360, freqTo: 180, volume: 0.045 })
+          break
+        case 'creatureDefeat':
+          sound.tone({ freq: 260, slideTo: 520, duration: 0.18, type: 'triangle', volume: 0.035 })
+          break
+        case 'playerHurt':
+          sound.tone({ freq: 180, slideTo: 95, duration: 0.14, type: 'sawtooth', volume: 0.04 })
+          break
       }
     },
     update(dt) {

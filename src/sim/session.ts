@@ -14,6 +14,8 @@ import { generateWorld } from '../voxel/generator'
 import { raycastVoxels } from '../voxel/raycast'
 import { VoxelWorld } from '../voxel/world'
 import { CollectibleStore, DiscoveryStore } from './exploration'
+import { CreatureSimulation } from './creatures'
+import { creatureSpec } from '../creatures/catalog'
 import { MissionController } from './mission'
 import { collidesAt, createPlayer, playerIntersectsVoxel, stepPlayer } from './player'
 import type {
@@ -25,12 +27,13 @@ const PICKUP_LABELS = { apple: 'Manzana', mushroom: 'Hongo' } as const
 
 export class GameSession {
   readonly world: VoxelWorld
+  readonly creatures: CreatureSimulation
   player: PlayerState
   contentPlan!: WorldContentPlan
   phase: GamePhase = 'focus'
   private inventory = {} as Record<BlockKey, number>
   private selectedSlot = 1
-  private target: TargetSnapshot = { hit: null, decoration: null, label: '' }
+  private target: TargetSnapshot = { hit: null, decoration: null, creature: null, label: '' }
   private decorationActive = new Uint8Array()
   private breakCooldown = 0
   private placeCooldown = 0
@@ -42,17 +45,22 @@ export class GameSession {
   private readonly mission: MissionController
   private notice: HudSnapshot['notice'] = null
   private noticeRemaining = 0
+  private health: number
+  private creatureAttackCooldown = 0
 
   constructor(private readonly config: GameConfig) {
     this.world = new VoxelWorld(config.world.min, config.world.size)
     this.player = createPlayer(config)
     this.cameraMode = config.camera.initialMode
     this.mission = new MissionController(config.mission)
+    this.creatures = new CreatureSimulation(this.world, config)
+    this.health = config.creatures.combat.playerMaxHealth
     this.restart()
   }
 
   restart(): void {
     this.contentPlan = generateWorld(this.world, this.config)
+    this.creatures.reset()
     this.collectibles.reset(this.contentPlan)
     this.decorationActive = new Uint8Array(this.contentPlan.meshes.length).fill(1)
     this.discoveries.reset(this.contentPlan)
@@ -65,7 +73,9 @@ export class GameSession {
     this.cameraMode = this.config.camera.initialMode
     this.events.length = 0
     this.resetInventory()
-    this.target = { hit: null, decoration: null, label: '' }
+    this.target = { hit: null, decoration: null, creature: null, label: '' }
+    this.health = this.config.creatures.combat.playerMaxHealth
+    this.creatureAttackCooldown = 0
     this.notice = null; this.noticeRemaining = 0
   }
 
@@ -91,6 +101,7 @@ export class GameSession {
     if (this.phase !== 'playing') return
     this.breakCooldown = Math.max(0, this.breakCooldown - dt)
     this.placeCooldown = Math.max(0, this.placeCooldown - dt)
+    this.creatureAttackCooldown = Math.max(0, this.creatureAttackCooldown - dt)
     if (this.noticeRemaining > 0) {
       this.noticeRemaining = Math.max(0, this.noticeRemaining - dt)
       if (this.noticeRemaining === 0) this.notice = null
@@ -102,6 +113,17 @@ export class GameSession {
       if (this.config.session.fallBehavior === 'defeat') this.end('defeat')
       else this.respawn()
       return
+    }
+    const creatureAttack = this.creatures.step(this.player.position, dt)
+    if (creatureAttack && this.config.creatures.combat.enabled) {
+      this.health = Math.max(0, this.health - creatureAttack.damage)
+      this.events.push({ type: 'sound', sound: 'playerHurt' })
+      this.setNotice(`${creatureAttack.attacker} te golpeó · Salud ${this.health}/${this.config.creatures.combat.playerMaxHealth}`, 'combat', 1.4)
+      if (this.health === 0) {
+        if (this.config.session.fallBehavior === 'defeat') this.end('defeat')
+        else this.respawn()
+        return
+      }
     }
     this.collectNearby(); this.discoverNearby(); this.evaluateMission()
   }
@@ -136,7 +158,8 @@ export class GameSession {
     return {
       phase: this.phase, paused, cameraMode, timeOfDay,
       mission: this.mission.snapshot(), notice: this.notice,
-      device, hasTarget: this.target.hit !== null || this.target.decoration !== null,
+      health: this.creatures.hasHostiles() ? { current: this.health, max: this.config.creatures.combat.playerMaxHealth } : null,
+      device, hasTarget: this.target.hit !== null || this.target.decoration !== null || this.target.creature !== null,
       targetLabel: this.target.label,
       slots: HOTBAR_BLOCKS.map((key, index) => ({
         key, label: BLOCKS[key].label, count: this.inventory[key],
@@ -157,10 +180,10 @@ export class GameSession {
 
   private refreshTarget(): void {
     const aim = this.aimRay
-    if (!aim) { this.target = { hit: null, decoration: null, label: '' }; return }
+    if (!aim) { this.target = { hit: null, decoration: null, creature: null, label: '' }; return }
     let target = this.raycastTarget(aim.origin, aim.direction, aim.maxDistance)
-    if ((target.hit || target.decoration) && this.cameraMode === 'third-person') {
-      const distance = (target.decoration?.distance ?? target.hit!.distance) + 0.001
+    if ((target.hit || target.decoration || target.creature) && this.cameraMode === 'third-person') {
+      const distance = (target.creature?.distance ?? target.decoration?.distance ?? target.hit!.distance) + 0.001
       const surface = {
         x: aim.origin.x + aim.direction.x * distance,
         y: aim.origin.y + aim.direction.y * distance,
@@ -174,16 +197,18 @@ export class GameSession {
       const line = { x: surface.x - eye.x, y: surface.y - eye.y, z: surface.z - eye.z }
       const reach = Math.hypot(line.x, line.y, line.z)
       const eyeTarget = reach <= this.config.interaction.reach
-        ? this.raycastTarget(eye, line, reach + 0.01) : { hit: null, decoration: null }
+        ? this.raycastTarget(eye, line, reach + 0.01) : { hit: null, decoration: null, creature: null }
       const sameBlock = target.hit && eyeTarget.hit && sameVoxel(eyeTarget.hit.voxel, target.hit.voxel)
       const sameDecoration = target.decoration && eyeTarget.decoration &&
         eyeTarget.decoration.index === target.decoration.index
-      if (!sameBlock && !sameDecoration) target = { hit: null, decoration: null }
+      const sameCreature = target.creature && eyeTarget.creature && eyeTarget.creature.index === target.creature.index
+      if (!sameBlock && !sameDecoration && !sameCreature) target = { hit: null, decoration: null, creature: null }
     }
     const decoration = target.decoration
     this.target = {
       ...target,
-      label: decoration ? decorationLabel(this.contentPlan.meshes[decoration.index])
+      label: target.creature ? creatureSpec(this.creatures.states()[target.creature.index].species).label
+        : decoration ? decorationLabel(this.contentPlan.meshes[decoration.index])
         : target.hit ? blockById(this.world.getBlock(target.hit.voxel.x, target.hit.voxel.y, target.hit.voxel.z)).label : '',
     }
   }
@@ -193,8 +218,15 @@ export class GameSession {
     const decoration = this.config.content.interaction.breakableDecorations
       ? raycastDecorations(this.contentPlan.meshes, this.decorationActive, origin, direction, maxDistance)
       : null
-    if (decoration && (!hit || decoration.distance < hit.distance)) return { hit: null, decoration }
-    return { hit, decoration: null }
+    const creature = this.creatures.raycast(origin, direction, maxDistance)
+    const voxelDistance = hit?.distance ?? Number.POSITIVE_INFINITY
+    const decorationDistance = decoration?.distance ?? Number.POSITIVE_INFINITY
+    const creatureDistance = creature?.distance ?? Number.POSITIVE_INFINITY
+    if (creature && creatureDistance < voxelDistance && creatureDistance < decorationDistance) {
+      return { hit: null, decoration: null, creature }
+    }
+    if (decoration && decorationDistance < voxelDistance) return { hit: null, decoration, creature: null }
+    return { hit, decoration: null, creature: null }
   }
 
   private selectedBlock(): HotbarBlockKey {
@@ -203,6 +235,26 @@ export class GameSession {
 
   private breakTarget(): void {
     this.breakCooldown = this.config.interaction.breakInterval
+    const creature = this.target.creature
+    if (creature) {
+      if (this.creatureAttackCooldown > 0) return
+      this.creatureAttackCooldown = this.config.creatures.combat.playerAttackCooldown
+      const state = this.creatures.states()[creature.index]
+      const result = this.creatures.damage(creature.index, this.config.creatures.combat.playerAttackDamage)
+      if (!result.accepted) {
+        this.events.push({ type: 'sound', sound: 'invalid' })
+        this.setNotice(`${result.label} es amistoso`, 'combat', 1.2)
+      } else {
+        this.events.push({ type: 'sound', sound: result.defeated ? 'creatureDefeat' : 'creatureHit' })
+        this.events.push({
+          type: 'creature', index: creature.index, action: result.defeated ? 'defeat' : 'hit',
+          position: { x: state.x, y: state.y + 0.5, z: state.z },
+        })
+        this.setNotice(result.defeated ? `${result.label} derrotado` : `Golpeaste a ${result.label}`, 'combat', 1.1)
+      }
+      this.refreshTarget()
+      return
+    }
     const decoration = this.target.decoration
     if (decoration) {
       this.removeDecoration(decoration.index, 'break')
@@ -256,7 +308,8 @@ export class GameSession {
     const replaced = hit ? this.world.getBlock(hit.adjacent.x, hit.adjacent.y, hit.adjacent.z) : BLOCKS.air.id
     if (!hit || !spec.placeable || this.inventory[key] <= 0 ||
         !this.world.contains(hit.adjacent.x, hit.adjacent.y, hit.adjacent.z) ||
-        !blockById(replaced).replaceable || playerIntersectsVoxel(this.player, hit.adjacent, this.config)) {
+        !blockById(replaced).replaceable || playerIntersectsVoxel(this.player, hit.adjacent, this.config) ||
+        this.creatures.intersectsVoxel(hit.adjacent)) {
       this.events.push({ type: 'sound', sound: 'invalid' }); return
     }
     const edit = this.world.setBlock(hit.adjacent.x, hit.adjacent.y, hit.adjacent.z, blockId(key))
@@ -305,6 +358,7 @@ export class GameSession {
     let worldReset = false
     if (!this.config.session.respawn.keepWorldEdits) {
       this.contentPlan = generateWorld(this.world, this.config)
+      this.creatures.reset()
       this.decorationActive = new Uint8Array(this.contentPlan.meshes.length).fill(1)
       this.collectibles.rebind(this.contentPlan)
       this.discoveries.rebind(this.contentPlan)
@@ -313,8 +367,9 @@ export class GameSession {
     if (!this.config.session.respawn.keepCollectibles) this.collectibles.reset(this.contentPlan)
     if (!this.config.session.respawn.keepBlockInventory) this.resetInventory()
     this.player = createPlayer(this.config)
-    this.target = { hit: null, decoration: null, label: '' }; this.aimRay = null
+    this.target = { hit: null, decoration: null, creature: null, label: '' }; this.aimRay = null
     this.breakCooldown = 0; this.placeCooldown = 0
+    this.health = this.config.creatures.combat.playerMaxHealth
     this.events.push({ type: 'respawn' })
     if (worldReset || !this.config.session.respawn.keepCollectibles) {
       this.events.push({ type: 'reset', world: worldReset })

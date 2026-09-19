@@ -6,6 +6,7 @@ import type { TimeOfDay } from '../environment/config'
 import { createEffects } from '../entities/effects'
 import { createContent } from '../entities/content'
 import { createEnvironment } from '../entities/environment'
+import { createCreatures } from '../entities/creatures'
 import { createScene } from '../entities/scene'
 import { createWorldView } from '../entities/world-view'
 import { CONFIG } from '../game.config'
@@ -65,12 +66,14 @@ export function setupGame(app: pc.Application): GameHandle {
       current.session.contentPlan, current.session.collectibleActiveSnapshot(),
       current.session.decorationActiveSnapshot(),
     )
+    current.creatures.reset()
     cameraMode = CONFIG.camera.initialMode
     current.scene.reset(current.session.player)
     timeOfDay = CONFIG.environment.sky.initialMode
     current.scene.setTimeOfDay(timeOfDay)
     current.environment.setTimeOfDay(timeOfDay)
     current.content.setTimeOfDay(timeOfDay)
+    current.creatures.setTimeOfDay(timeOfDay)
     current.view.setTimeOfDay(timeOfDay)
     current.audio.reset()
     current.input.clear()
@@ -117,6 +120,7 @@ export function setupGame(app: pc.Application): GameHandle {
       current.scene.setTimeOfDay(timeOfDay)
       current.environment.setTimeOfDay(timeOfDay)
       current.content.setTimeOfDay(timeOfDay)
+      current.creatures.setTimeOfDay(timeOfDay)
       current.view.setTimeOfDay(timeOfDay)
       updatePresentation(current)
     },
@@ -149,6 +153,9 @@ export function setupGame(app: pc.Application): GameHandle {
           current.effects.burst(event.position, false)
           current.scene.triggerAvatarAction(event.position)
         }
+      }
+      if (event.type === 'creature' && event.action === 'defeat') {
+        current.effects.burst(event.position, false)
       }
       if (event.type === 'reset') {
         if (event.world) current.view.rebuildAll()
@@ -227,6 +234,7 @@ export function setupGame(app: pc.Application): GameHandle {
       current.view.update()
       current.environment.update(frameDt, current.session.player)
       current.content.update(frameDt)
+      current.creatures.update(frameDt)
       if (current.session.phase === 'playing') {
         current.effects.update(frameDt)
         current.audio.update(frameDt)
@@ -249,12 +257,13 @@ export function setupGame(app: pc.Application): GameHandle {
       const effects = createEffects(app, CONFIG)
       const environment = createEnvironment(app, scene.camera, session.world, CONFIG)
       const content = createContent(app, session.contentPlan, session.collectibleActiveSnapshot(), CONFIG)
+      const creatures = createCreatures(app, session.creatures, CONFIG)
       const input = createInput(canvas, CONFIG)
       const audio = createGameAudio(CONFIG)
       audio.setMuted(muted)
       const pause = createPause({
         keys: [], overlay: false, pauseOnBlur: false,
-        inputs: [input, audio, environment, content],
+        inputs: [input, audio, environment, content, creatures],
         onChange(paused) {
           app.timeScale = paused ? 0 : 1
           if (paused) {
@@ -262,10 +271,10 @@ export function setupGame(app: pc.Application): GameHandle {
             bufferedJump = false; bufferedPlace = false; bufferedBreak = false
             input.releaseFocus()
           }
-          updatePresentation({ session, assets: assets!, scene, view, effects, environment, content, input, audio, pause })
+          updatePresentation({ session, assets: assets!, scene, view, effects, environment, content, creatures, input, audio, pause })
         },
       })
-      runtime = { session, assets, scene, view, effects, environment, content, input, audio, pause }
+      runtime = { session, assets, scene, view, effects, environment, content, creatures, input, audio, pause }
       focus = createPlayFocus({
         input, pause, phase: () => session.phase, begin: () => session.begin(),
         changed: () => { if (runtime) updatePresentation(runtime) },
@@ -278,7 +287,8 @@ export function setupGame(app: pc.Application): GameHandle {
       const environmentStats = environment.stats()
       const contentStats = content.stats()
       const avatarStats = scene.avatarStats()
-      console.info(`[Rabbit Voxel Lab] ${stats.chunks} chunks, ${stats.drawCalls} terrain draw calls (${stats.waterDrawCalls} water), ${environmentStats.drawCalls} environment draw calls (${environmentStats.clouds} clouds, ${environmentStats.particles} particles), ${contentStats.drawCalls} content draw calls (${contentStats.trees} trees, ${contentStats.decorations} props, ${contentStats.collectibles} collectibles), ${avatarStats.drawCalls} avatar draw calls (${avatarStats.renderer}), ${stats.triangles} terrain triangles, max boot remesh ${stats.maxRemeshMs.toFixed(1)} ms`)
+      const creatureStats = creatures.stats()
+      console.info(`[Rabbit Voxel Lab] ${stats.chunks} chunks, ${stats.drawCalls} terrain draw calls (${stats.waterDrawCalls} water), ${environmentStats.drawCalls} environment draw calls (${environmentStats.clouds} clouds, ${environmentStats.particles} particles), ${contentStats.drawCalls} content draw calls (${contentStats.trees} trees, ${contentStats.decorations} props, ${contentStats.collectibles} collectibles), ${creatureStats.drawCalls} creature draw calls (${creatureStats.active} active, ${creatureStats.species} species), ${avatarStats.drawCalls} avatar draw calls (${avatarStats.renderer}), ${stats.triangles} terrain triangles, max boot remesh ${stats.maxRemeshMs.toFixed(1)} ms`)
       resolveReady()
     } catch (error) {
       assets?.destroy()
@@ -307,7 +317,7 @@ export function setupGame(app: pc.Application): GameHandle {
       runtime = null
       if (current) {
         current.pause.destroy(); current.input.destroy(); current.audio.destroy()
-        current.effects.destroy(); current.environment.destroy(); current.content.destroy(); current.view.destroy()
+        current.effects.destroy(); current.environment.destroy(); current.content.destroy(); current.creatures.destroy(); current.view.destroy()
         current.scene.destroy(); current.assets.destroy()
       }
       hud.destroy()

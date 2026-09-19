@@ -20,6 +20,7 @@ Maintain the reusable Rabbit voxel template without breaking deterministic gener
 - Tune numbers, colors, spawn or landmarks in `src/game.config.ts`; extend `src/systems/config-validator.ts` for new invariants.
 - Tune sky, clouds, lakes, shore density, particles or ambience only through `CONFIG.environment`. Keep the public types in `src/environment/config.ts`, deterministic lake membership in `src/environment/lakes.ts`, and PlayCanvas factories in `src/entities/environment.ts`.
 - Tune trees, ground decoration, landmarks, discoveries and pickups through `CONFIG.content`. Keep public types in `src/content/config.ts`, deterministic placements in `src/content/planner.ts`, editable structures in `src/content/voxel-features.ts`, and merged render resources in `src/entities/content.ts`.
+- Tune animals, enemies, characters, behavior and combat through `CONFIG.creatures`. Keep stable species and aliases in `src/creatures/catalog.ts`, deterministic spawns in `src/creatures/planner.ts`, fixed-step behavior/targeting in `src/sim/creatures.ts`, and shared procedural species meshes in `src/entities/creatures.ts`.
 - Tune the active objective through `CONFIG.mission`. `none` is open sandbox, `beacon` conditionally generates sockets/crystals, and `collect` guarantees enough target pickups. Keep mission evaluation engine-independent.
 - Handle “make it night/day” by changing `environment.sky.initialMode` or the existing `day/night` presets. Use `showToggleButton` only to expose/hide the temporary ☾/☀ control; preserve the shared runtime controller in scene, environment and world view.
 - Handle “make it first/third person” through `CONFIG.camera`. Keep strategy logic in `src/entities/camera-rig.ts`, the real camera-center ray in `AimRay`, and third-person visibility/reach verification in `src/sim/session.ts`. Do not create separate player movement implementations.
@@ -46,6 +47,7 @@ Maintain the reusable Rabbit voxel template without breaking deterministic gener
 - Clouds and procedural props remain merged by layer/category. Environment features implement `update/reset/setPaused/setTimeOfDay/destroy/stats` and are registered through the internal factory list.
 - Breakable decorations use an active bitset and rebuild only merged content meshes after edits. They never gain per-instance entities or colliders, and removing their supporting voxel removes them from interaction and rendering.
 - Procedural content uses at most six additional draw calls. Collectibles use one active bitset and rebuild only their category mesh on pickup.
+- Creature presets stay deterministic. Built-in procedural species create one shared mesh per active species and at most one draw call per active moving creature; never attach rigidbodies, DOM, or listeners per creature.
 - Day/night switches reuse both prebuilt domes and celestial bodies, one merged star mesh and shared terrain/cloud materials. Do not rebuild chunks or recreate resources when toggling.
 - Camera switches reuse one camera, one configured avatar and one shadow. FPS hides the avatar completely; third-person movement remains camera-relative and interaction must pass both camera and player-eye DDA checks.
 - Restart restores `camera.initialMode`, seed, active preset, pickups and discoveries; respawn obeys `session.respawn` without duplicating or reconstructing engine resources.
@@ -72,6 +74,7 @@ For gameplay or lifecycle changes also verify:
 - touch-sized landscape and portrait layout;
 - deterministic lake/cloud/decoration layout plus individual environment toggles;
 - deterministic forest/minimal content plan, sandbox/beacon/collect mission boot, pickups, discoveries and fall respawn;
+- empty/peacefulForest/forestAdventure creature presets, friendly targeting, hostile damage, defeat, water avoidance, pause and restart;
 - both day/night presets, initial night boot, hidden toggle config and restart-to-initial-mode;
 - both camera modes, camera collision/recovery, aligned crosshair, initial third-person boot, hidden/disabled selector, V/Y/touch switching and restart-to-initial-mode;
 - both avatar renderers and required GLB clips; FPS must contribute zero visible avatar draw calls;

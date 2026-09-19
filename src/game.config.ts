@@ -3,6 +3,7 @@ import type { AvatarConfig, CameraConfig } from './camera/config'
 import type { EnvironmentConfig } from './environment/config'
 import type { ContentConfig } from './content/config'
 import type { MissionConfig } from './sim/mission-config'
+import type { CreaturesConfig } from './creatures/config'
 
 type Vec3 = readonly [number, number, number]
 
@@ -33,6 +34,7 @@ export interface GameConfig {
   hud: { heartbeat: number }
   environment: EnvironmentConfig
   content: ContentConfig
+  creatures: CreaturesConfig
   visual: {
     topTint: number; sideTint: number; darkSideTint: number; bottomTint: number
     selection: string; socket: string
@@ -205,6 +207,43 @@ export const CONFIG = {
       maxTrees: 24, maxScatterInstances: 96, maxCollectibles: 32,
       maxLandmarks: 8, maxExtraDrawCalls: 6,
     },
+  },
+  creatures: {
+    preset: 'peacefulForest',
+    presets: {
+      empty: { groups: [] },
+      peacefulForest: {
+        groups: [
+          { species: 'horse', count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 4, roamRadius: 8 },
+          { species: 'chicken', count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 3, roamRadius: 6 },
+          { species: 'sheep', count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 3.5, roamRadius: 7 },
+          { species: 'pig', count: 1, zones: ['forest'], scale: 1, minSpacing: 3, roamRadius: 6 },
+          { species: 'dog', count: 1, zones: ['spawn-meadow'], scale: 1, minSpacing: 3, roamRadius: 10 },
+          { species: 'raccoon', count: 1, zones: ['forest'], scale: 1, minSpacing: 3, roamRadius: 7 },
+        ],
+      },
+      forestAdventure: {
+        groups: [
+          { species: 'horse', count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 4, roamRadius: 8 },
+          { species: 'chicken', count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 3, roamRadius: 6 },
+          { species: 'sheep', count: 2, zones: ['forest'], scale: 1, minSpacing: 3.5, roamRadius: 7 },
+          { species: 'pig', count: 1, zones: ['forest'], scale: 1, minSpacing: 3, roamRadius: 6 },
+          { species: 'dog', count: 1, zones: ['spawn-meadow'], scale: 1, minSpacing: 3, roamRadius: 10 },
+          { species: 'raccoon', count: 1, zones: ['forest'], scale: 1, minSpacing: 3, roamRadius: 7 },
+          { species: 'wolf', count: 1, zones: ['highland', 'forest'], scale: 1, minSpacing: 5, roamRadius: 10 },
+          { species: 'slime', count: 2, zones: ['shore', 'forest'], scale: 1, minSpacing: 4, roamRadius: 8 },
+          { species: 'skeleton', count: 1, zones: ['highland'], scale: 1, minSpacing: 5, roamRadius: 9 },
+          { species: 'goblin', count: 1, zones: ['forest'], scale: 1, minSpacing: 5, roamRadius: 9 },
+          { species: 'zombie', count: 1, zones: ['coast', 'forest'], scale: 1, minSpacing: 5, roamRadius: 8 },
+        ],
+      },
+    },
+    combat: {
+      enabled: true, animalsDamageable: false, playerMaxHealth: 5,
+      playerAttackDamage: 1, playerAttackCooldown: 0.32, enemyAttackCooldown: 1.1,
+    },
+    simulation: { decisionHz: 10, sleepDistance: 30 },
+    limits: { maxCreatures: 16, maxEnemies: 6, maxDrawCalls: 20 },
   },
   visual: {
     topTint: 1, sideTint: 0.88, darkSideTint: 0.8, bottomTint: 0.65,

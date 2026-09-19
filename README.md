@@ -4,7 +4,7 @@
 
 Template 3D de construcción por bloques para Rabbit Game Lab, construido con PlayCanvas, Vite y TypeScript estricto. Incluye vistas FPS y tercera persona, un explorador voxel visible y un sandbox procedural con misiones intercambiables.
 
-La isla `64×32×64` incluye un ambiente enteramente procedural: bosque mixto editable, troncos, flores, juncos, carteles, fogata, ruina, mirador, recogibles y descubrimientos, además de día/noche, nubes, lago y audio ambiental. No requiere assets ambientales ni dependencias adicionales. Las decoraciones pequeñas pueden picarse y desaparecen si se rompe el bloque sólido que las sostiene, sin dejar de usar mallas combinadas.
+La isla `64×32×64` incluye un ambiente enteramente procedural: bosque mixto editable, troncos, flores, juncos, carteles, fogata, ruina, mirador, recogibles y descubrimientos, además de día/noche, nubes, lago, audio ambiental y un catálogo plug-and-play de animales, enemigos y personajes. No requiere assets ambientales ni dependencias adicionales. Las decoraciones pequeñas pueden picarse y desaparecen si se rompe el bloque sólido que las sostiene, sin dejar de usar mallas combinadas.
 
 ## Ejecutar
 
@@ -41,6 +41,7 @@ Con mouse, entrar y continuar requieren pointer lock para giros ilimitados. Un s
 - `src/voxel/`: `Uint8Array` por chunk, generación determinista, DDA y face-culling.
 - `src/environment/`: contrato tipado y reglas deterministas de lagos.
 - `src/content/`: presets tipados, placement determinista y archetypes voxel.
+- `src/creatures/`: catálogo, aliases, presets y placement determinista de criaturas.
 - `src/sim/`: jugador cinemático y reglas sin dependencias de PlayCanvas.
 - `src/entities/`: escena, cámaras, avatares, mallas de chunks y contenido combinado, ambiente, selección y efectos.
 - `src/systems/`: composición, input normalizado, HUD, audio y lifecycle Rabbit.
@@ -52,7 +53,7 @@ El mundo mide 64×32×64 y contiene 32 chunks de 16³. Se generan todos antes de
 
 `CONFIG.camera` concentra modo inicial, selector, FOV, sensibilidad y cámara de seguimiento; `CONFIG.player.avatar` elige el explorador procedural o el GLB de Quaternius. Para arrancar en tercera persona basta cambiar `camera.initialMode` a `third-person`; la UI puede ocultarse con `camera.switching.showButton: false` sin retirar el sistema.
 
-`CONFIG.environment` concentra los presets `day/night`, estrellas, nubes, lagos, partículas y audio. `CONFIG.content.preset` alterna entre `forest` y `minimal`; `CONFIG.mission.active` elige `none`, `beacon` o `collect`. El selector día/noche está oculto por defecto. Las recetas están en [`docs/game-config.md`](docs/game-config.md), [`docs/environment-config.md`](docs/environment-config.md) y [`docs/content-config.md`](docs/content-config.md).
+`CONFIG.environment` concentra los presets `day/night`, estrellas, nubes, lagos, partículas y audio. `CONFIG.content.preset` alterna entre `forest` y `minimal`; `CONFIG.creatures.preset` elige `empty`, `peacefulForest` o `forestAdventure`; `CONFIG.mission.active` elige `none`, `beacon` o `collect`. El selector día/noche está oculto por defecto. Las recetas están en [`docs/game-config.md`](docs/game-config.md), [`docs/environment-config.md`](docs/environment-config.md), [`docs/content-config.md`](docs/content-config.md) y [`docs/creature-config.md`](docs/creature-config.md).
 
 ## Asset CC0
 
@@ -62,4 +63,4 @@ Una extensión futura con props del pack debe seguir este flujo: seleccionar só
 
 ## Alcance deliberado
 
-No hay mundo infinito, streaming, greedy meshing, crafting, enemigos, fauna, natación, simulación de fluidos, iluminación voxel, backend, guardado ni multiplayer. Caer produce respawn sin perder el sandbox; restart y recarga vuelven a generar la seed `1337`. Greedy meshing se evaluará únicamente si mediciones en dispositivos objetivo demuestran que el face-culling actual no alcanza.
+No hay mundo infinito, streaming, greedy meshing, crafting, combate a distancia, monturas, domesticación, crianza, natación, simulación de fluidos, iluminación voxel, backend, guardado ni multiplayer. Caer produce respawn sin perder el sandbox; restart y recarga vuelven a generar la seed `1337`. Greedy meshing se evaluará únicamente si mediciones en dispositivos objetivo demuestran que el face-culling actual no alcanza.
