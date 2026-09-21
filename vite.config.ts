@@ -12,14 +12,14 @@ export default defineConfig({
     host: true,
     cors: true,
     headers: {
-      'Permissions-Policy': 'pointer-lock=(self), fullscreen=(self), gamepad=(self)',
+      'Permissions-Policy': 'pointer-lock=*, fullscreen=(self), gamepad=(self)',
     },
   },
   preview: {
     host: true,
     cors: true,
     headers: {
-      'Permissions-Policy': 'pointer-lock=(self), fullscreen=(self), gamepad=(self)',
+      'Permissions-Policy': 'pointer-lock=*, fullscreen=(self), gamepad=(self)',
     },
   },
   build: {

@@ -1,5 +1,9 @@
 # Acceptance report
 
+## Full pointer lock in iframe — 2026-09-21
+
+Julian rejected hover-look and the capture-denied chip. Desktop look now requires a granted pointer lock. Escape unlocks the mouse and does not pause; `P` pauses. Canvas click recaptures. There is no hover-look, drag-look, or “captura infinita está bloqueada” chip. Parent iframe must send `allow="pointer-lock"` and sandbox `allow-pointer-lock`. `npm run test:focus` covers Escape-does-not-pause, KeyP pause, lock-loss without pause, and `requestPointerLock` even when Permissions-Policy reports false.
+
 ## Plug-and-play creatures — 2026-09-18
 
 - Added a deterministic procedural catalog containing seven animals, four enemies, and two character archetypes; no new downloads, dependencies, or third-party files were introduced.

@@ -18,10 +18,10 @@
 - In third person, `distance` and `height` define the camera boom; `collisionRadius`, `collisionPadding`, `minDistance`, and `returnSpeed` control collision and recovery. The camera center produces the crosshair's actual ray.
 - Mouse and touch sensitivities are measured in degrees per pixel; `padLookSpeed` uses degrees per second.
 - `gamepadDeadZone` belongs to `[0, 1)`.
-- Desktop mouse look prefers pointer lock. Start and Continue request capture from a user gesture. If the browser or embedding iframe denies lock (typical without parent `allow="pointer-lock"` / sandbox `allow-pointer-lock`), gameplay still starts and uses hold-to-look drag plus hover-look. Escape or loss of a granted capture pauses. Escape never resumes the game.
-- `fallbackDragThreshold` is pixels of movement that distinguish a break click from drag-look when pointer lock is not held. Touch and gamepad do not require pointer lock.
-- A denied capture shows a compact hint with Retry, not a full-screen stop overlay. Rabbit's embedding iframe should still send `allow="autoplay; pointer-lock; fullscreen; gamepad"` and, when sandboxed, `allow-pointer-lock`, so infinite look can work. Studio resume does not bypass the local Continue/capture step.
-- A rejected recapture within 1.5 seconds of unlocking is treated as potentially temporary: Continue stays pending and retries once after that window. If the retry still fails, gameplay resumes with drag/hover look instead of freezing. Escape, reset, destruction, or Studio pause cancel the queued attempt.
+- Desktop mouse look uses pointer lock. Start, Continue, and canvas clicks request capture from a user gesture. Escape unlocks the mouse and does not pause; `P` (and the HUD button) pause. After Escape, the next click recaptures. There is no hover-look, drag-look, or capture-denied chip — the camera must not pan while the cursor is free.
+- Rabbit's embedding iframe must send `allow="autoplay; pointer-lock; fullscreen; gamepad"` and, when sandboxed, `allow-pointer-lock`. Missing parent tokens are a Studio bug, not a reason to ship hover-look.
+- Touch and gamepad do not require pointer lock.
+- Studio resume does not bypass the local Continue/capture step.
 - `V`, the HUD button, and gamepad `Y` switch views when switching is enabled.
 
 ## Avatar
