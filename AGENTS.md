@@ -90,7 +90,7 @@ ranges live in `docs/game-config.md`.
 | Title, crystals to win, fall death | `CONFIG.session` |
 | Walk/jump/gravity/avatar renderer | `CONFIG.player`, `CONFIG.player.avatar` |
 | Camera mode, look sensitivity, third-person distance | `CONFIG.camera` |
-| Touch size, gamepad dead zone, drag fallback | `CONFIG.controls` |
+| Touch size, gamepad dead zone | `CONFIG.controls` |
 | World size, spawn, landmarks, starting blocks | `CONFIG.world` |
 | Reach, break/place cadence | `CONFIG.interaction` |
 | Sky, day/night, lakes, clouds, ambience | `CONFIG.environment` |
@@ -131,7 +131,7 @@ requests it solves:
 | `gamepad` | joystick buttons/axes → the same actions |
 | `touch` | on-screen joystick + buttons, feeding the same actions |
 | `sound` | music/sfx groups, procedural `tone()`, mute and pause |
-| `pause` | one pause state (Escape/P, a HUD button or Studio) + overlay |
+| `pause` | one pause state (P, a HUD button or Studio) + overlay |
 | `assets` | GLB models, textures, audio files |
 | `character` | an imported GLB as an actor: `play('run')` instead of clip names |
 | `spatial` | Profile spatial-v1 decoration fits (pure TS, no PlayCanvas) |
@@ -196,7 +196,7 @@ node ../rabbit-game-kit/bin/rabbit-kit.mjs verify http://localhost:<port>
 
 For gameplay, input, camera, environment, or lifecycle work, verify in a
 GPU-backed browser: clean boot and one `rabbit:ready`; keyboard/mouse and
-pointer-lock fallback; touch landscape/portrait; day/night presets; first- and
+pointer-lock recapture after Escape; touch landscape/portrait; day/night presets; first- and
 third-person modes; both avatar renderers; water wading and lake restoration;
 chunk-boundary edits; pause, victory, defeat, restart (repeat restart). Record
 results in `docs/acceptance-report.md` when doing formal acceptance.

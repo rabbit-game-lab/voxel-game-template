@@ -37,15 +37,20 @@ lock.release()
 assert.equal(lock.locked(), false)
 lock.destroy()
 
+let blockedCalls = 0
 globalThis.document = {
   ...globalThis.document,
   featurePolicy: { allowsFeature: () => false },
 }
 const blocked = createPointerLock({
-  requestPointerLock() { throw new Error('should not request') },
+  requestPointerLock() {
+    blockedCalls += 1
+    return Promise.reject(new Error('policy'))
+  },
 })
 assert.equal(blocked.allowed(), false)
 assert.equal(await blocked.request(), false)
+assert.equal(blockedCalls, 1, 'Policy reports must not skip the real requestPointerLock call')
 blocked.destroy()
 
 globalThis.document = {

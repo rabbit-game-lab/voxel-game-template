@@ -23,7 +23,7 @@ export interface GameConfig {
     avatar: AvatarConfig
   }
   camera: CameraConfig
-  controls: { gamepadDeadZone: number; fallbackDragThreshold: number; touchSize: number }
+  controls: { gamepadDeadZone: number; touchSize: number }
   world: {
     seed: number; min: Vec3; size: Vec3; spawn: Vec3
     plateauCenter: Vec3; beaconBase: Vec3
@@ -99,7 +99,7 @@ export const CONFIG = {
       },
     },
   },
-  controls: { gamepadDeadZone: 0.17, fallbackDragThreshold: 7, touchSize: 126 },
+  controls: { gamepadDeadZone: 0.17, touchSize: 126 },
   world: {
     seed: 1337,
     min: [-32, 0, -32], size: [64, 32, 64], spawn: [0.5, 15, 0.5],

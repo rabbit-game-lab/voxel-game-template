@@ -9,7 +9,7 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "pointer-lock=(self), fullscreen=(self), gamepad=(self)"
+          "value": "pointer-lock=*, fullscreen=(self), gamepad=(self)"
         }
       ]
     }

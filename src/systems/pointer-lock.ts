@@ -39,7 +39,7 @@ export function createPointerLock(canvas: HTMLCanvasElement): PointerLockHandle 
     allowed: () => typeof canvas.requestPointerLock === 'function' && policyAllowsPointerLock(),
     async request() {
       if (isLocked()) return true
-      if (typeof canvas.requestPointerLock !== 'function' || !policyAllowsPointerLock()) return false
+      if (typeof canvas.requestPointerLock !== 'function') return false
       try {
         const result = canvas.requestPointerLock()
         if (result && typeof result.then === 'function') {

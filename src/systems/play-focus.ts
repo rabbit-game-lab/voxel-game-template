@@ -2,10 +2,7 @@ import type { PauseHandle } from '../rabbit/pause'
 import type { GamePhase, InputDevice } from '../sim/types'
 import type { InputHandle } from './input'
 
-export type CaptureStatus = 'idle' | 'pending' | 'denied' | 'studio'
-
-// Chromium blocks recapture for 1250 ms after Escape; allow a small margin.
-const RECAPTURE_GRACE_MS = 1500
+export type CaptureStatus = 'idle' | 'pending' | 'studio'
 
 /** Coordinates browser capture with Rabbit's authoritative pause state. */
 export function createPlayFocus(options: {
@@ -22,13 +19,9 @@ export function createPlayFocus(options: {
   let destroyed = false
   let requestId = 0
   let wasLocked = input.isFocused()
-  let lastUnlock = -Infinity
-  let retryTimer: ReturnType<typeof setTimeout> | undefined
 
   function cancelRequest(): void {
     requestId++
-    clearTimeout(retryTimer)
-    retryTimer = undefined
   }
 
   function stop(): void {
@@ -40,8 +33,8 @@ export function createPlayFocus(options: {
     options.changed()
   }
 
-  function activate(next: CaptureStatus = 'idle'): void {
-    status = next
+  function activate(): void {
+    status = 'idle'
     options.begin()
     pause.set(false)
     options.changed()
@@ -58,44 +51,27 @@ export function createPlayFocus(options: {
     status = 'pending'
     const id = ++requestId
     // Call directly in the trusted gesture, before any await.
-    function requestCapture(canRetry: boolean): void {
-      if (destroyed || id !== requestId) return
-      void input.requestFocus().then((locked) => {
-        if (destroyed || id !== requestId) {
-          if (destroyed || (status !== 'pending' && (pause.isPaused() || device !== 'keyboard' ||
-              options.phase() !== 'playing'))) input.releaseFocus()
-          return
-        }
-        if (locked || input.isFocused()) activate()
-        else if (canRetry && Date.now() - lastUnlock < RECAPTURE_GRACE_MS) {
-          // Escape imposes a temporary browser cooldown. Respect it, then
-          // retry once within the original Continue gesture's activation.
-          retryTimer = setTimeout(() => {
-            retryTimer = undefined
-            requestCapture(false)
-          }, Math.max(0, RECAPTURE_GRACE_MS - (Date.now() - lastUnlock)))
-        } else {
-          // Iframe / Permissions-Policy denials must not brick the session.
-          activate('denied')
-        }
-      })
-    }
-    requestCapture(true)
+    void input.requestFocus().then(() => {
+      if (destroyed || id !== requestId) {
+        if (destroyed || (status !== 'pending' && (pause.isPaused() || device !== 'keyboard' ||
+            options.phase() !== 'playing'))) input.releaseFocus()
+        return
+      }
+      activate()
+    })
     options.changed()
   }
 
   const unsubscribe = input.onFocusChange((locked) => {
     const lost = wasLocked && !locked
-    if (lost) lastUnlock = Date.now()
     wasLocked = locked
     if (destroyed) return
     if (locked && (device !== 'keyboard' || studioPaused || (pause.isPaused() && status !== 'pending') ||
         !['focus', 'playing'].includes(options.phase()))) input.releaseFocus()
-    if (locked && status === 'denied') { status = 'idle'; options.changed() }
-    if (lost && options.phase() === 'playing' && !pause.isPaused()) stop()
+    if (lost) options.changed()
   })
   const onKey = (event: KeyboardEvent): void => {
-    if (event.code !== 'Escape' && event.code !== 'KeyP') return
+    if (event.code !== 'KeyP') return
     event.preventDefault()
     if (!event.repeat && ['focus', 'playing'].includes(options.phase())) stop()
   }

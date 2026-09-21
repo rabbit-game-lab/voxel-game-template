@@ -3,7 +3,6 @@ import { mock } from 'node:test'
 import { createPlayFocus } from '../src/systems/play-focus.ts'
 import { createPause } from '../src/rabbit/pause.ts'
 
-// Exercise the real Rabbit pause authority with deterministic browser events.
 globalThis.window = new EventTarget()
 globalThis.document = { createElement: () => ({ remove() {} }) }
 function event(type, values = {}) {
@@ -41,30 +40,30 @@ function fixture() {
   }
 }
 
-for (const order of ['key-first', 'unlock-first']) {
+{
   const f = fixture()
   f.focus.resume('keyboard')
   assert.equal(f.pause.isPaused(), true)
   await f.finish(true)
   assert.equal(f.phase(), 'playing')
   assert.equal(f.pause.isPaused(), false)
-  if (order === 'key-first') event('keydown', { code: 'Escape', repeat: false })
   f.change(false)
   event('keydown', { code: 'Escape', repeat: false })
-  event('keydown', { code: 'Escape', repeat: true })
+  assert.equal(f.pause.isPaused(), false, 'Escape unlocks the mouse and must not pause')
+  assert.equal(f.input.isFocused(), false)
+  f.destroy()
+}
+{
+  const f = fixture()
+  f.focus.resume('keyboard'); await f.finish(true)
+  event('keydown', { code: 'KeyP', repeat: false })
   assert.equal(f.pause.isPaused(), true)
-  for (let i = 0; i < 5; i++) {
-    f.focus.resume('keyboard'); await f.finish(true)
-    assert.equal(f.pause.isPaused(), false)
-    f.change(false)
-    assert.equal(f.pause.isPaused(), true)
-  }
   f.destroy()
 }
 {
   const f = fixture()
   f.focus.resume('keyboard'); await f.finish(false)
-  assert.equal(f.focus.status(), 'denied')
+  assert.equal(f.focus.status(), 'idle')
   assert.equal(f.phase(), 'playing')
   assert.equal(f.pause.isPaused(), false)
   f.focus.resume('keyboard')
@@ -96,55 +95,37 @@ for (const phase of ['focus', 'victory', 'defeat']) {
   assert.equal(f.pause.isPaused(), false)
   f.destroy()
 }
-for (const cancel of ['reset', 'destroy', 'escape']) {
+for (const cancel of ['reset', 'destroy', 'pause-key']) {
   const f = fixture()
   f.focus.resume('keyboard')
-  if (cancel === 'escape') event('keydown', { code: 'Escape', repeat: false })
+  if (cancel === 'pause-key') event('keydown', { code: 'KeyP', repeat: false })
   else f.focus[cancel]()
   await f.finish(true)
   assert.equal(f.pause.isPaused(), true)
   assert.equal(f.input.isFocused(), false)
   f.destroy()
 }
+{
+  const f = fixture()
+  f.focus.resume('keyboard'); await f.finish(true)
+  f.change(false)
+  assert.equal(f.pause.isPaused(), false, 'Losing lock must not pause')
+  const before = f.requests()
+  f.focus.resume('keyboard'); await f.finish(true)
+  assert.equal(f.pause.isPaused(), false)
+  assert.equal(f.requests(), before + 1, 'Next Continue/click recaptures')
+  f.destroy()
+}
 mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 10000 })
-for (const outcome of ['success', 'denied', 'escape', 'reset', 'destroy', 'studio']) {
+{
   const f = fixture()
   f.focus.resume('keyboard'); await f.finish(true)
   f.change(false)
   f.focus.resume('keyboard'); await f.finish(false)
-  assert.equal(f.focus.status(), 'pending', 'Temporary rejection must not show an error')
-  assert.equal(f.pause.isPaused(), true)
-  assert.equal(f.requests(), 2)
-  if (outcome === 'escape') event('keydown', { code: 'Escape', repeat: false })
-  if (outcome === 'studio') event('message', { data: { type: 'rabbit:pause', paused: true } })
-  if (outcome === 'reset' || outcome === 'destroy') f.focus[outcome]()
   mock.timers.tick(1500)
-  if (outcome === 'success' || outcome === 'denied') {
-    assert.equal(f.requests(), 3, 'One automatic retry without another gesture')
-    await f.finish(outcome === 'success')
-    assert.equal(f.pause.isPaused(), false)
-    assert.equal(f.focus.status(), outcome === 'success' ? 'idle' : 'denied')
-    mock.timers.tick(5000)
-    assert.equal(f.requests(), 3, 'No retry loop on a real denial')
-  } else {
-    assert.equal(f.requests(), 2, 'Cancellation must remove the queued retry')
-    assert.equal(f.pause.isPaused(), true)
-  }
+  assert.equal(f.requests(), 2, 'Denied lock must not auto-retry without a gesture')
+  assert.equal(f.pause.isPaused(), false)
   f.destroy()
 }
 mock.timers.reset()
-{
-  const f = fixture()
-  f.focus.resume('keyboard'); await f.finish(false)
-  assert.equal(f.pause.isPaused(), false)
-  assert.equal(f.focus.status(), 'denied')
-  const before = f.requests()
-  f.focus.resume('keyboard')
-  assert.equal(f.pause.isPaused(), false, 'Retry must not freeze an already playable session')
-  await f.finish(false)
-  assert.equal(f.pause.isPaused(), false)
-  assert.equal(f.focus.status(), 'denied')
-  assert.equal(f.requests(), before + 1)
-  f.destroy()
-}
 console.log('Pointer capture / Rabbit pause regression scenarios passed.')
