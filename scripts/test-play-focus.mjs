@@ -65,8 +65,8 @@ for (const order of ['key-first', 'unlock-first']) {
   const f = fixture()
   f.focus.resume('keyboard'); await f.finish(false)
   assert.equal(f.focus.status(), 'denied')
-  assert.equal(f.phase(), 'focus')
-  assert.equal(f.pause.isPaused(), true)
+  assert.equal(f.phase(), 'playing')
+  assert.equal(f.pause.isPaused(), false)
   f.focus.resume('keyboard')
   event('message', { data: { type: 'rabbit:pause', paused: true } })
   await f.finish(true)
@@ -86,7 +86,7 @@ for (const device of ['touch', 'gamepad']) {
   assert.equal(f.pause.isPaused(), false)
   assert.equal(f.input.isFocused(), false)
   event('pointermove', { pointerType: 'mouse' })
-  assert.equal(f.pause.isPaused(), true)
+  assert.equal(f.pause.isPaused(), false, 'Unlocked mouse look must not stop a running session')
   f.destroy()
 }
 for (const phase of ['focus', 'victory', 'defeat']) {
@@ -122,7 +122,7 @@ for (const outcome of ['success', 'denied', 'escape', 'reset', 'destroy', 'studi
   if (outcome === 'success' || outcome === 'denied') {
     assert.equal(f.requests(), 3, 'One automatic retry without another gesture')
     await f.finish(outcome === 'success')
-    assert.equal(f.pause.isPaused(), outcome === 'denied')
+    assert.equal(f.pause.isPaused(), false)
     assert.equal(f.focus.status(), outcome === 'success' ? 'idle' : 'denied')
     mock.timers.tick(5000)
     assert.equal(f.requests(), 3, 'No retry loop on a real denial')
@@ -133,4 +133,18 @@ for (const outcome of ['success', 'denied', 'escape', 'reset', 'destroy', 'studi
   f.destroy()
 }
 mock.timers.reset()
+{
+  const f = fixture()
+  f.focus.resume('keyboard'); await f.finish(false)
+  assert.equal(f.pause.isPaused(), false)
+  assert.equal(f.focus.status(), 'denied')
+  const before = f.requests()
+  f.focus.resume('keyboard')
+  assert.equal(f.pause.isPaused(), false, 'Retry must not freeze an already playable session')
+  await f.finish(false)
+  assert.equal(f.pause.isPaused(), false)
+  assert.equal(f.focus.status(), 'denied')
+  assert.equal(f.requests(), before + 1)
+  f.destroy()
+}
 console.log('Pointer capture / Rabbit pause regression scenarios passed.')

@@ -8,7 +8,7 @@ Camera/movement: Configurable first/third-person strategies over the same fixed-
 Objective: `none` for sandbox by default; optional beacon and collection missions selected in config.
 Failure/restart: Falling below the island respawns while preserving edits/inventory; restart regenerates seed 1337.
 Content: Eight solid block types, hidden water, one 64×32×64 island, mixed forest, lake, breakable support-aware merged decoration, discoveries, pickups, optional mission landmarks, and a procedural creature catalog.
-Controls: Keyboard with required pointer lock for mouse look; Escape or capture loss pauses immediately and Continue reacquires capture. Touch joystick plus drag-look/buttons and standard gamepad remain capture-independent; camera switch via HUD/V/Y.
+Controls: Keyboard mouse look with pointer lock when the embed allows it; otherwise hold-to-look drag and hover-look keep the session playable. Escape or loss of a granted capture pauses immediately. Continue reacquires capture and falls back to drag look if denied. Touch joystick plus drag-look/buttons and standard gamepad remain capture-independent; camera switch via HUD/V/Y.
 Assets and licenses: Quaternius `Blocks_PixelArt.png` and optional `Character_Male_2` GLB, CC0 1.0; procedural audio, environment and default voxel avatar.
 Config sections: Session, mission, player, camera, controls, world, content, interaction, HUD, environment, visuals, audio, performance.
 Environment: Configurable day/night presets with sun, moon and merged stars; camera-centered gradient sky, two merged voxel-cloud layers, transparent chunk water, fixed particles and procedural ambience.

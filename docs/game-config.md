@@ -18,10 +18,10 @@
 - In third person, `distance` and `height` define the camera boom; `collisionRadius`, `collisionPadding`, `minDistance`, and `returnSpeed` control collision and recovery. The camera center produces the crosshair's actual ray.
 - Mouse and touch sensitivities are measured in degrees per pixel; `padLookSpeed` uses degrees per second.
 - `gamepadDeadZone` belongs to `[0, 1)`.
-- Desktop mouse gameplay requires pointer lock. Start and Continue request capture from a user gesture; gameplay stays paused until capture succeeds. Escape or loss of capture opens pause immediately. Escape never resumes the game.
-- `fallbackDragThreshold` is retained for configuration compatibility but no longer used: free-cursor mouse gameplay is disabled. Touch and gamepad do not require pointer lock.
-- A rejected capture shows a retry overlay. Rabbit's embedding iframe must allow pointer lock (including `allow-pointer-lock` when sandboxed). Studio resume does not bypass the local Continue/capture step.
-- A rejected recapture within 1.5 seconds of unlocking is treated as potentially temporary: Continue stays pending and retries once after that window. Gameplay remains paused. Only a failed retry shows the error overlay; Escape, reset, destruction, or Studio pause cancel the queued attempt.
+- Desktop mouse look prefers pointer lock. Start and Continue request capture from a user gesture. If the browser or embedding iframe denies lock (typical without parent `allow="pointer-lock"` / sandbox `allow-pointer-lock`), gameplay still starts and uses hold-to-look drag plus hover-look. Escape or loss of a granted capture pauses. Escape never resumes the game.
+- `fallbackDragThreshold` is pixels of movement that distinguish a break click from drag-look when pointer lock is not held. Touch and gamepad do not require pointer lock.
+- A denied capture shows a compact hint with Retry, not a full-screen stop overlay. Rabbit's embedding iframe should still send `allow="autoplay; pointer-lock; fullscreen; gamepad"` and, when sandboxed, `allow-pointer-lock`, so infinite look can work. Studio resume does not bypass the local Continue/capture step.
+- A rejected recapture within 1.5 seconds of unlocking is treated as potentially temporary: Continue stays pending and retries once after that window. If the retry still fails, gameplay resumes with drag/hover look instead of freezing. Escape, reset, destruction, or Studio pause cancel the queued attempt.
 - `V`, the HUD button, and gamepad `Y` switch views when switching is enabled.
 
 ## Avatar

@@ -50,6 +50,10 @@ const CSS = `
     background:#203b38e8;border-radius:3px;box-shadow:0 4px 0 #10201d}
   .v-time{font-size:22px;line-height:1}.v-time.is-night{background:#17233de8;color:#dbe9ff}
   .v-camera{font-size:12px;letter-spacing:.04em;background:#31504be8}
+  .v-capture{position:absolute;top:68px;left:50%;transform:translateX(-50%);pointer-events:auto;
+    border:1px solid #ffe9a8;background:#6b4e2cdd;border-radius:3px;padding:7px 10px;font-size:12px;
+    display:none;align-items:center;gap:8px;white-space:nowrap;text-shadow:none}
+  .v-capture button{border:1px solid #fff0b5;background:#d37943;padding:4px 8px;border-radius:3px;font-size:11px}
   .v-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:auto;
     background:linear-gradient(#18312cb8,#0b1715e8);padding:18px}
   .v-card{width:min(560px,94vw);border:3px solid #e3d39e;background:#203b38f5;box-shadow:0 10px 0 #0d1816;
@@ -63,7 +67,7 @@ const CSS = `
     font-size:11px;line-height:1.45;max-width:220px}
   @media(max-width:700px),(pointer:coarse){.v-objective{top:9px;left:8px;transform:none;font-size:13px}.v-notice{top:61px;font-size:12px}.v-health{left:8px;top:55px;font-size:15px}.v-actions{top:8px;right:8px;gap:7px}
     .v-hotbar{bottom:92px;gap:3px}.v-slot{width:46px;height:46px}.v-swatch{width:22px;height:22px}
-    .v-hints{display:none}}
+    .v-hints{display:none}.v-capture{top:auto;bottom:86px}}
   @media(max-width:390px){.v-slot{width:42px;height:42px}.v-hotbar{bottom:84px}.v-objective{font-size:11px}}
 `
 
@@ -79,7 +83,8 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
       <button class="v-time" aria-label="Cambiar a modo noche">☾</button>
       <button class="v-camera" aria-label="Cambiar a tercera persona">3P</button>
       <button class="v-pause" aria-label="Pausa">Ⅱ</button></div>
-    <div class="v-hints"></div><div class="v-overlay"></div></div>`
+    <div class="v-hints"></div><div class="v-capture"><span>Arrastrá el mouse para mirar. La captura infinita está bloqueada en este iframe.</span>
+      <button type="button" data-retry-lock>Reintentar</button></div><div class="v-overlay"></div></div>`
   const root = container.firstElementChild as HTMLElement
   const objective = root.querySelector('.v-objective') as HTMLElement
   const notice = root.querySelector('.v-notice') as HTMLElement
@@ -87,6 +92,7 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
   const target = root.querySelector('.v-target') as HTMLElement
   const hotbar = root.querySelector('.v-hotbar') as HTMLElement
   const overlay = root.querySelector('.v-overlay') as HTMLElement
+  const capture = root.querySelector('.v-capture') as HTMLElement
   const hints = root.querySelector('.v-hints') as HTMLElement
   const actionRow = root.querySelector('.v-actions') as HTMLElement
   const crosshair = root.querySelector('.v-crosshair') as HTMLElement
@@ -105,18 +111,18 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
   pauseButton.addEventListener('click', actions.togglePause)
   timeButton.addEventListener('click', actions.toggleTimeOfDay)
   cameraButton.addEventListener('click', actions.toggleCamera)
+  capture.querySelector<HTMLElement>('[data-retry-lock]')?.addEventListener('click', () => {
+    actions.resume(gestureDevice)
+  })
 
   function overlayMarkup(snapshot: HudSnapshot, status: CaptureStatus): string {
     if (status === 'studio') return '<div class="v-card"><h1>Pausa</h1><p>Rabbit tiene el juego pausado.</p></div>'
-    if (status === 'pending') return '<div class="v-card"><h1>Capturando mouse</h1><p>Esperando al navegador…</p></div>'
-    if (status === 'denied') return `<div class="v-card"><h1>El juego está detenido</h1>
-      <p>El navegador no permitió capturar el mouse. Reintentá o abrí el juego en un navegador que permita mouse infinito.</p>
-      <button class="v-primary" data-resume>Reintentar</button></div>`
+    if (status === 'pending' && snapshot.paused) return '<div class="v-card"><h1>Capturando mouse</h1><p>Esperando al navegador…</p></div>'
     if (snapshot.phase === 'focus') return `<div class="v-card"><h1>${config.session.title}</h1>
       <p>${snapshot.mission
         ? `Misión: <strong>${snapshot.mission.title}</strong>. Explorá, construí y completá el objetivo.`
         : 'Explorá libremente la isla, descubrí lugares y transformá el mundo bloque por bloque.'}</p>
-      <p><strong>WASD</strong> mover · <strong>Espacio</strong> saltar · <strong>Escape</strong> pausa. Al entrar con mouse, se captura para mirar sin límites.</p>
+      <p><strong>WASD</strong> mover · <strong>Espacio</strong> saltar · <strong>Escape</strong> pausa. Mouse captura si el iframe lo permite; si no, arrastrá para mirar.</p>
       <button class="v-primary" data-start>Entrar al mundo</button></div>`
     if (snapshot.paused) return `<div class="v-card"><h1>Pausa</h1><p>El mundo está congelado.</p>
       <button class="v-primary" data-resume>Continuar</button></div>`
@@ -159,7 +165,11 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
       })
       hints.textContent = snapshot.device === 'gamepad'
         ? 'Stick izq.: mover · Stick der.: mirar · RT romper · LT colocar · A saltar · Y cámara'
-        : 'WASD: mover · Mové el cursor para mirar · LMB romper · RMB colocar · V cámara · 1–6 seleccionar'
+        : pointerCaptured
+          ? 'WASD: mover · Mouse: mirar · LMB romper · RMB colocar · V cámara · 1–6 seleccionar'
+          : 'WASD: mover · Arrastrá o deslizá el mouse para mirar · click rompe · click derecho coloca'
+      capture.style.display = snapshot.phase === 'playing' && !snapshot.paused && captureStatus === 'denied'
+        ? 'flex' : 'none'
       const markup = overlayMarkup(snapshot, captureStatus)
       overlay.innerHTML = markup
       overlay.style.display = markup ? 'flex' : 'none'
@@ -177,6 +187,7 @@ export function createHud(container: HTMLElement, config: GameConfig, actions: H
       objective.style.display = 'none'; notice.style.display = 'none'; health.style.display = 'none'; target.style.display = 'none'; hotbar.style.display = 'none'
       actionRow.style.display = 'none'; crosshair.style.display = 'none'
       hints.style.display = 'none'
+      capture.style.display = 'none'
       overlay.style.display = 'flex'
       overlay.innerHTML = `<div class="v-card"><h1>No se pudo iniciar</h1><p>${message}</p></div>`
     },
