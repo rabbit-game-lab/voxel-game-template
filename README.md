@@ -27,11 +27,11 @@ node ~/.codex/skills/create-rabbit-playcanvas-game/scripts/audit-template.mjs .
 
 | Dispositivo | Movimiento y cámara | Acciones |
 |---|---|---|
-| Desktop | WASD; mouse capturado rota la cámara; Shift para sprint | Espacio salta, LMB rompe, RMB coloca, V cambia cámara, rueda/1–6 selecciona, Esc/P pausa |
+| Desktop | WASD; mouse look (pointer lock when allowed, drag/hover otherwise); Shift para sprint | Espacio salta, LMB rompe, RMB coloca, V cambia cámara, rueda/1–6 selecciona, Esc/P pausa |
 | Touch | Joystick izquierdo, drag derecho | Botones de salto, romper, colocar y cámara; hotbar tocable |
 | Gamepad | Stick izquierdo y derecho | A salta, Y cambia cámara, RT rompe, LT coloca, LB/RB cambia slot, Start pausa |
 
-Con mouse, entrar y continuar requieren pointer lock para giros ilimitados. Un solo Escape libera el cursor y pausa inmediatamente; Continuar recupera la captura antes de reanudar. Si el navegador rechaza la captura, el juego permanece detenido y permite reintentar. Touch y gamepad no requieren captura. LMB rompe y RMB coloca.
+Con mouse, entrar pide pointer lock para giros ilimitados. Si el iframe o el navegador lo niegan, el mundo arranca igual: arrastrá o deslizá el cursor para mirar. Un solo Escape libera una captura concedida y pausa; Continuar reintenta la captura y, si sigue bloqueada, sigue con look por arrastre. Touch y gamepad no requieren captura. LMB rompe y RMB coloca.
 
 ## Arquitectura
 

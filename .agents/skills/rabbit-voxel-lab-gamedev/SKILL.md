@@ -70,7 +70,7 @@ node ~/.codex/skills/create-rabbit-playcanvas-game/scripts/audit-template.mjs .
 For gameplay or lifecycle changes also verify:
 
 - clean boot and one `rabbit:ready` in an opaque-origin iframe;
-- keyboard/mouse and pointer-lock fallback;
+- Desktop mouse-look and pointer-lock fallback (drag/hover when the iframe denies capture);
 - touch-sized landscape and portrait layout;
 - deterministic lake/cloud/decoration layout plus individual environment toggles;
 - deterministic forest/minimal content plan, sandbox/beacon/collect mission boot, pickups, discoveries and fall respawn;

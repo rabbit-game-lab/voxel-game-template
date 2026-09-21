@@ -78,6 +78,9 @@ export function validateConfig(config: GameConfig, modelKeys: readonly string[] 
   if (config.controls.gamepadDeadZone < 0 || config.controls.gamepadDeadZone >= 1) {
     errors.push('controls.gamepadDeadZone must be in [0, 1)')
   }
+  if (!Number.isFinite(config.controls.fallbackDragThreshold) || config.controls.fallbackDragThreshold < 1) {
+    errors.push('controls.fallbackDragThreshold must be a finite number ≥ 1')
+  }
 
   const { environment } = config
   for (const [label, value] of Object.entries({

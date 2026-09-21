@@ -40,8 +40,8 @@ export function createPlayFocus(options: {
     options.changed()
   }
 
-  function activate(): void {
-    status = 'idle'
+  function activate(next: CaptureStatus = 'idle'): void {
+    status = next
     options.begin()
     pause.set(false)
     options.changed()
@@ -53,7 +53,8 @@ export function createPlayFocus(options: {
     if (studioPaused) { status = 'studio'; options.changed(); return }
     if (status === 'pending') return
     if (device !== 'keyboard') { cancelRequest(); activate(); return }
-    pause.set(true)
+    const keepPlaying = options.phase() === 'playing' && !pause.isPaused()
+    if (!keepPlaying) pause.set(true)
     status = 'pending'
     const id = ++requestId
     // Call directly in the trusted gesture, before any await.
@@ -73,7 +74,10 @@ export function createPlayFocus(options: {
             retryTimer = undefined
             requestCapture(false)
           }, Math.max(0, RECAPTURE_GRACE_MS - (Date.now() - lastUnlock)))
-        } else { status = 'denied'; options.changed() }
+        } else {
+          // Iframe / Permissions-Policy denials must not brick the session.
+          activate('denied')
+        }
       })
     }
     requestCapture(true)
@@ -87,6 +91,7 @@ export function createPlayFocus(options: {
     if (destroyed) return
     if (locked && (device !== 'keyboard' || studioPaused || (pause.isPaused() && status !== 'pending') ||
         !['focus', 'playing'].includes(options.phase()))) input.releaseFocus()
+    if (locked && status === 'denied') { status = 'idle'; options.changed() }
     if (lost && options.phase() === 'playing' && !pause.isPaused()) stop()
   })
   const onKey = (event: KeyboardEvent): void => {
@@ -100,15 +105,8 @@ export function createPlayFocus(options: {
     if (studioPaused) stop()
     else { status = 'idle'; options.changed() }
   }
-  const onMouse = (event: PointerEvent): void => {
-    if (event.pointerType !== 'mouse' || options.phase() !== 'playing' || pause.isPaused()) return
-    device = 'keyboard'
-    if (!input.isFocused()) stop()
-  }
   window.addEventListener('keydown', onKey)
   window.addEventListener('message', onMessage)
-  window.addEventListener('pointermove', onMouse, true)
-  window.addEventListener('pointerdown', onMouse, true)
   pause.set(true)
 
   return {
@@ -120,8 +118,6 @@ export function createPlayFocus(options: {
       destroyed = true; cancelRequest(); unsubscribe()
       window.removeEventListener('keydown', onKey)
       window.removeEventListener('message', onMessage)
-      window.removeEventListener('pointermove', onMouse, { capture: true })
-      window.removeEventListener('pointerdown', onMouse, { capture: true })
     },
   }
 }
