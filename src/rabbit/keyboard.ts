@@ -40,6 +40,8 @@
  * =============================================================================
  */
 
+import { pauseGate } from './runtime'
+
 export interface KeyboardHandle<A extends string = string> {
   /** True while any mapped key (or virtual press) for the action is held. */
   pressed(action: A): boolean
@@ -119,10 +121,6 @@ export function createKeyboard<A extends string>(
     }
   }
 
-  function onMessage(event: MessageEvent): void {
-    const data = event.data as { type?: string; paused?: boolean } | null
-    if (data?.type === 'rabbit:pause') setPaused(data.paused !== false)
-  }
 
   function setPaused(value: boolean): void {
     if (paused === value) return
@@ -132,7 +130,8 @@ export function createKeyboard<A extends string>(
 
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
-  window.addEventListener('message', onMessage)
+  window.addEventListener('blur', clearAll)
+  const gate = pauseGate(setPaused)
 
   function subscribe(subs: Map<A, Set<() => void>>, action: A, callback: () => void): () => void {
     const set = subs.get(action) ?? new Set<() => void>()
@@ -154,11 +153,12 @@ export function createKeyboard<A extends string>(
         virtualCount.set(action, Math.max(0, (virtualCount.get(action) ?? 0) - 1))
       )
     },
-    setPaused,
+    setPaused: gate.set,
     destroy: () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
-      window.removeEventListener('message', onMessage)
+      window.removeEventListener('blur', clearAll)
+      gate.destroy()
       clearAll()
       downSubs.clear()
       upSubs.clear()

@@ -11,7 +11,7 @@
     "dev": "vite --host",
     "build": "tsc && vite build",
     "check": "npm run test:focus && node scripts/check.mjs",
-    "test:focus": "node --experimental-strip-types scripts/test-play-focus.mjs && node --experimental-strip-types scripts/test-pointer-lock.mjs",
+    "test:focus": "node --import ./scripts/register-tests.mjs --experimental-strip-types scripts/test-play-focus.mjs && node --import ./scripts/register-tests.mjs --experimental-strip-types scripts/test-pointer-lock.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

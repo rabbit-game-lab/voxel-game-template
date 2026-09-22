@@ -1,164 +1,126 @@
-/**
- * rabbit/sdk — Rabbit platform iframe contract (vendored copy).
- *
- * ⛔ AGENTS MUST NOT EDIT THIS FILE. Its hash is validated by the Contract Gate.
- * It will be replaced by the `@rabbit/game-kit` package with the same API.
- *
- * Provides:
- *  - Handshake:   ready() emits `rabbit:ready`; global errors emit `rabbit:error`.
- *  - Incoming:    `rabbit:pause`, `rabbit:restart`, `rabbit:mute` → init() handlers.
- *  - storage:     safe localStorage wrapper with in-memory fallback
- *                 (sandboxed iframes without allow-same-origin throw without it).
- *  - audio:       AudioContext unlock on the first user gesture.
- *  - Resize:      container observer, never depends on the top frame.
- */
+/** Rabbit iframe contract. Canonical source: rabbit-game-kit; sync, do not fork. */
+import { runtime } from './runtime'
+export { runtime } from './runtime'
 
 export interface SdkHandlers {
   onPause?: (paused: boolean) => void
   onRestart?: () => void
   onMute?: (muted: boolean) => void
 }
-
 function post(type: string, payload?: Record<string, unknown>): void {
   try {
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ type, ...payload }, '*')
-    }
-  } catch {
-    // Cross-origin restrictions — nothing to do.
-  }
+    if (window.parent && window.parent !== window) window.parent.postMessage({ type, ...payload }, '*')
+  } catch { /* Parent may have navigated. */ }
+}
+export function reportError(error: unknown): void {
+  post('rabbit:error', { message: String(error instanceof Error ? error.message : error).slice(0, 2000) })
 }
 
-// ---------------------------------------------------------------------------
-// Safe storage
-// ---------------------------------------------------------------------------
-
-const memoryStore = new Map<string, string>()
-
+// After a storage failure, use one consistent in-memory backend for this document.
+const memoryStore = new Map<string, string | null>()
+let memoryOnly = false
 export const storage = {
   get(key: string): string | null {
-    try {
-      return window.localStorage.getItem(key)
-    } catch {
-      return memoryStore.get(key) ?? null
+    if (memoryStore.has(key)) return memoryStore.get(key) ?? null
+    if (!memoryOnly) {
+      try { return window.localStorage.getItem(key) } catch { memoryOnly = true }
     }
+    return null
   },
   set(key: string, value: string): void {
-    try {
-      window.localStorage.setItem(key, value)
-    } catch {
-      memoryStore.set(key, value)
+    memoryStore.set(key, value)
+    if (!memoryOnly) {
+      try { window.localStorage.setItem(key, value) } catch { memoryOnly = true }
     }
   },
   remove(key: string): void {
-    try {
-      window.localStorage.removeItem(key)
-    } catch {
-      memoryStore.delete(key)
+    memoryStore.set(key, null)
+    if (!memoryOnly) {
+      try { window.localStorage.removeItem(key) } catch { memoryOnly = true }
     }
   },
+  persistent: () => !memoryOnly,
 }
 
-// ---------------------------------------------------------------------------
-// Audio unlock
-// ---------------------------------------------------------------------------
-
-interface ResumableContext {
-  state: string
-  resume(): Promise<void>
-}
-
-const audioContexts: ResumableContext[] = []
-let gestureBound = false
-
+interface ResumableContext { state: string; resume(): Promise<void> }
+const audioContexts = new Map<ResumableContext, () => boolean>()
+const gestures = ['pointerdown', 'keydown', 'touchstart'] as const
 function unlockAll(): void {
-  for (const ctx of audioContexts) {
-    if (ctx.state === 'suspended') {
-      void ctx.resume().catch(() => undefined)
-    }
+  if (runtime.state().paused) return
+  for (const [ctx, allowed] of audioContexts) {
+    if (allowed() && ctx.state === 'suspended') void ctx.resume().catch(() => undefined)
   }
 }
-
-function bindGesture(): void {
-  if (gestureBound) return
-  gestureBound = true
-  const events: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart']
-  for (const eventName of events) {
-    window.addEventListener(eventName, unlockAll, { passive: true })
-  }
-}
-
 export const audio = {
-  /** Registers an AudioContext so the SDK resumes it on the first gesture. */
-  register(ctx: ResumableContext): void {
-    audioContexts.push(ctx)
-    bindGesture()
+  /** Returns unregister; allowed gates context-specific pause during gestures. */
+  register(ctx: ResumableContext, allowed: () => boolean = () => true): () => void {
+    if (!audioContexts.size) for (const event of gestures) window.addEventListener(event, unlockAll, { passive: true })
+    audioContexts.set(ctx, allowed)
+    return () => {
+      audioContexts.delete(ctx)
+      if (!audioContexts.size) for (const event of gestures) window.removeEventListener(event, unlockAll)
+    }
   },
-  /** Forces a resume of every registered context. */
-  unlock(): void {
-    unlockAll()
-  },
+  unlock: unlockAll,
 }
-
-// ---------------------------------------------------------------------------
-// Handshake + incoming messages
-// ---------------------------------------------------------------------------
 
 let readySent = false
-
-/** Emits `rabbit:ready` exactly once. Call after the first rendered frame. */
-export function ready(): void {
-  if (readySent) return
+let readyRequested = false
+let pending = 0
+let bootFailed = false
+function flushReady(): void {
+  if (!readyRequested || readySent || pending || bootFailed) return
   readySent = true
   post('rabbit:ready')
 }
-
-/** Installs global error listeners and Studio incoming-message listeners. */
-export function init(handlers: SdkHandlers = {}): void {
-  window.addEventListener('message', (event: MessageEvent) => {
-    const data = event.data as { type?: string; paused?: boolean; muted?: boolean } | null
-    if (!data || typeof data.type !== 'string') return
-    switch (data.type) {
-      case 'rabbit:pause':
-        handlers.onPause?.(data.paused !== false)
-        break
-      case 'rabbit:restart':
-        handlers.onRestart?.()
-        break
-      case 'rabbit:mute':
-        handlers.onMute?.(data.muted !== false)
-        break
-    }
+/** Register critical work synchronously before ready(); failures block ready. */
+export function requireReady<T>(work: Promise<T>): Promise<T> {
+  if (readySent) return work
+  pending++
+  const tracked = work.then((value) => { pending--; flushReady(); return value }, (error: unknown) => {
+    pending--; bootFailed = true; reportError(error); throw error
   })
-
-  window.addEventListener('error', (event: ErrorEvent) => {
-    post('rabbit:error', {
-      message: String(event.message ?? 'Unknown error'),
-      source: event.filename ?? '',
-      line: event.lineno ?? 0,
-    })
-  })
-
-  window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
-    post('rabbit:error', { message: String(event.reason ?? 'Unhandled rejection') })
-  })
-
-  bindGesture()
+  void tracked.catch(() => undefined)
+  return tracked
 }
+/** Request ready after a rendered frame; pending critical loads delay emission. */
+export function ready(): void { readyRequested = true; flushReady() }
 
-// ---------------------------------------------------------------------------
-// Resize
-// ---------------------------------------------------------------------------
-
-/** Observes the container and reports its size (calls back immediately). */
-export function observeResize(
-  element: HTMLElement,
-  callback: (width: number, height: number) => void
-): void {
+let disposeCurrent: (() => void) | undefined
+/** Replaces prior init handlers. Its disposer is safe to call repeatedly. */
+export function init(handlers: SdkHandlers = {}): () => void {
+  const disposePrevious = disposeCurrent
+  let previous = { paused: false, muted: false }
+  const offState = runtime.subscribe((state) => {
+    if (state.paused !== previous.paused) handlers.onPause?.(state.paused)
+    if (state.muted !== previous.muted) handlers.onMute?.(state.muted)
+    previous = { ...state }
+  })
+  const offRestart = runtime.onRestart(() => handlers.onRestart?.())
+  disposePrevious?.()
+  const onError = (event: ErrorEvent) => reportError(event.message ?? 'Unknown error')
+  const onRejection = (event: PromiseRejectionEvent) => reportError(event.reason ?? 'Unhandled rejection')
+  window.addEventListener('error', onError)
+  window.addEventListener('unhandledrejection', onRejection)
+  let disposed = false
+  const dispose = () => {
+    if (disposed) return
+    disposed = true
+    offState(); offRestart()
+    window.removeEventListener('error', onError)
+    window.removeEventListener('unhandledrejection', onRejection)
+    if (disposeCurrent === dispose) disposeCurrent = undefined
+  }
+  disposeCurrent = dispose
+  return dispose
+}
+/** Observe local container sizing; returns disconnect for teardown/HMR. */
+export function observeResize(element: HTMLElement, callback: (width: number, height: number) => void): () => void {
   const observer = new ResizeObserver((entries) => {
     const rect = entries[0]?.contentRect
     if (rect) callback(rect.width, rect.height)
   })
   observer.observe(element)
   callback(element.clientWidth, element.clientHeight)
+  return () => observer.disconnect()
 }

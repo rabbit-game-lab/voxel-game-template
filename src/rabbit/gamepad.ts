@@ -56,6 +56,8 @@
  */
 
 /** Anything with press/release — createKeyboard()'s handle satisfies this. */
+import { pauseGate } from './runtime'
+
 export interface GamepadTarget<A extends string = string> {
   press(action: A): void
   release(action: A): void
@@ -112,9 +114,11 @@ export function listGamepads(): readonly { slot: number; id: string }[] {
 
 function connectedPads(): Gamepad[] {
   const pads: Gamepad[] = []
-  for (const pad of navigator.getGamepads?.() ?? []) {
-    if (pad && pad.connected) pads.push(pad)
-  }
+  try {
+    for (const pad of navigator.getGamepads?.() ?? []) {
+      if (pad && pad.connected) pads.push(pad)
+    }
+  } catch { return [] }
   return pads.sort((a, b) => a.index - b.index)
 }
 
@@ -170,18 +174,23 @@ export function createGamepad<A extends string>(
       return
     }
 
+    const next = new Map<A, number>()
+    const collect = (action: A, active: boolean, value: number) => {
+      next.set(action, Math.max(next.get(action) ?? 0, active ? Math.max(value, Number.EPSILON) : 0))
+    }
     for (const [index, action] of Object.entries(buttons)) {
       const button = pad.buttons[Number(index)]
       const value = button?.value ?? 0
-      set(action, button?.pressed === true || value > 0.5, value)
+      collect(action, button?.pressed === true || value > 0.5, value)
     }
 
     for (const [index, pair] of Object.entries(axes)) {
       const value = pad.axes[Number(index)] ?? 0
-      set(pair.negative, value < -deadZone, Math.max(0, -value))
-      set(pair.positive, value > deadZone, Math.max(0, value))
+      collect(pair.negative, value < -deadZone, Math.max(0, -value))
+      collect(pair.positive, value > deadZone, Math.max(0, value))
     }
 
+    for (const [action, value] of next) set(action, value > 0, value)
     stick = { x: applyDeadZone(pad.axes[0] ?? 0), y: applyDeadZone(pad.axes[1] ?? 0) }
   }
 
@@ -195,10 +204,6 @@ export function createGamepad<A extends string>(
     if (paused) releaseAll()
   }
 
-  function onMessage(event: MessageEvent): void {
-    const data = event.data as { type?: string; paused?: boolean } | null
-    if (data?.type === 'rabbit:pause') setPaused(data.paused !== false)
-  }
 
   function subscribe(subs: Map<A, Set<() => void>>, action: A, callback: () => void): () => void {
     const set_ = subs.get(action) ?? new Set<() => void>()
@@ -207,7 +212,7 @@ export function createGamepad<A extends string>(
     return () => set_.delete(callback)
   }
 
-  window.addEventListener('message', onMessage)
+  const gate = pauseGate(setPaused)
   frame = requestAnimationFrame(poll)
 
   return {
@@ -218,10 +223,10 @@ export function createGamepad<A extends string>(
     onUp: (action, callback) => subscribe(upSubs, action, callback),
     axis: () => (paused ? { x: 0, y: 0 } : { ...stick }),
     analog: (action) => (paused ? 0 : strength.get(action) ?? 0),
-    setPaused,
+    setPaused: gate.set,
     destroy: () => {
       cancelAnimationFrame(frame)
-      window.removeEventListener('message', onMessage)
+      gate.destroy()
       releaseAll()
       downSubs.clear()
       upSubs.clear()

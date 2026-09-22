@@ -50,6 +50,8 @@
  */
 
 /** Anything with press/release — createKeyboard()'s handle satisfies this. */
+import { pauseGate } from './runtime'
+
 export interface TouchTarget<A extends string = string> {
   press(action: A): void
   release(action: A): void
@@ -234,6 +236,8 @@ export function createTouch<A extends string>(options: TouchOptions<A>): TouchHa
   })
 
   // --- Swipe gestures (whole screen, no overlay needed) ---
+  const swipeFrames = new Map<number, A>()
+  const cancelSwipe = () => { swipeStart = null }
   let swipeStart: { x: number; y: number; time: number } | null = null
 
   function onPointerDown(event: PointerEvent): void {
@@ -264,13 +268,14 @@ export function createTouch<A extends string>(options: TouchOptions<A>): TouchHa
     // so a poll of pressed() in this frame's update still sees it held.
     options.target.press(action)
     const held = action
-    requestAnimationFrame(() => options.target.release(held))
+    const frame = requestAnimationFrame(() => { swipeFrames.delete(frame); options.target.release(held) })
+    swipeFrames.set(frame, held)
   }
 
   if (options.swipe) {
     window.addEventListener('pointerdown', onPointerDown, { passive: true })
     window.addEventListener('pointerup', onPointerUp, { passive: true })
-    window.addEventListener('pointercancel', () => (swipeStart = null), { passive: true })
+    window.addEventListener('pointercancel', cancelSwipe, { passive: true })
   }
 
   function setVisible(visible: boolean): void {
@@ -288,21 +293,20 @@ export function createTouch<A extends string>(options: TouchOptions<A>): TouchHa
     setVisible(!paused && wantsOverlay)
   }
 
-  function onMessage(event: MessageEvent): void {
-    const data = event.data as { type?: string; paused?: boolean } | null
-    if (data?.type === 'rabbit:pause') setPaused(data.paused !== false)
-  }
 
-  window.addEventListener('message', onMessage)
+  const gate = pauseGate(setPaused)
   document.body.appendChild(root)
-  setVisible(wantsOverlay)
+  setVisible(!paused && wantsOverlay)
 
   return {
     axis: () => ({ ...axis }),
-    setPaused,
+    setPaused: gate.set,
     setVisible,
     destroy() {
-      window.removeEventListener('message', onMessage)
+      gate.destroy()
+      window.removeEventListener('pointercancel', cancelSwipe)
+      for (const [frame, action] of swipeFrames) { cancelAnimationFrame(frame); options.target.release(action) }
+      swipeFrames.clear()
       window.removeEventListener('pointerdown', onPointerDown)
       window.removeEventListener('pointerup', onPointerUp)
       releaseAll()

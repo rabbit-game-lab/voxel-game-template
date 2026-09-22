@@ -3,6 +3,8 @@ import * as pc from 'playcanvas'
 import * as sdk from './rabbit/sdk'
 import { setupGame } from './systems/loop'
 
+sdk.init()
+
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement
 const container = document.getElementById('app') as HTMLElement
 
@@ -14,6 +16,8 @@ app.setCanvasResolution(pc.RESOLUTION_AUTO)
 app.graphicsDevice.maxPixelRatio = Math.min(window.devicePixelRatio || 1, 2)
 
 const game = setupGame(app)
+const bootReady = (game as typeof game & { ready?: Promise<void> }).ready
+if (bootReady) sdk.requireReady(bootReady)
 
 sdk.init({
   onRestart: () => game.restart(),

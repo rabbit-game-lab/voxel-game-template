@@ -1,4 +1,5 @@
 import type { PauseHandle } from '../rabbit/pause'
+import { runtime } from '../rabbit/runtime'
 import type { GamePhase, InputDevice } from '../sim/types'
 import type { InputHandle } from './input'
 
@@ -75,14 +76,13 @@ export function createPlayFocus(options: {
     event.preventDefault()
     if (!event.repeat && ['focus', 'playing'].includes(options.phase())) stop()
   }
-  const onMessage = (event: MessageEvent): void => {
-    if (event.data?.type !== 'rabbit:pause') return
-    studioPaused = event.data.paused !== false
+  const offRuntime = runtime.subscribe((state) => {
+    if (studioPaused === state.hostPaused) return
+    studioPaused = state.hostPaused
     if (studioPaused) stop()
     else { status = 'idle'; options.changed() }
-  }
+  })
   window.addEventListener('keydown', onKey)
-  window.addEventListener('message', onMessage)
   pause.set(true)
 
   return {
@@ -93,7 +93,7 @@ export function createPlayFocus(options: {
     destroy() {
       destroyed = true; cancelRequest(); unsubscribe()
       window.removeEventListener('keydown', onKey)
-      window.removeEventListener('message', onMessage)
+      offRuntime()
     },
   }
 }
