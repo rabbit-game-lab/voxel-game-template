@@ -1,4 +1,0 @@
-interface:
-  display_name: "Rabbit Voxel Lab Gamedev"
-  short_description: "Safely extend Rabbit voxel cameras, worlds and gameplay"
-  default_prompt: "Use $rabbit-voxel-lab-gamedev to add or tune a voxel camera, avatar, gameplay or environment feature safely."

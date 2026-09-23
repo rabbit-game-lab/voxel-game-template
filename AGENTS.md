@@ -106,6 +106,10 @@ fork movement physics per camera mode.
 
 ## Where to add what
 
+Use this as the repository's gameplay-routing map. Keep simulation rules in
+engine-independent `src/sim/` and PlayCanvas rendering/lifecycle in `src/entities/`
+and `src/systems/`.
+
 1. **Tuning values** → `src/game.config.ts` first; extend `src/systems/config-validator.ts` for new invariants.
 2. **New block type** → append a new stable ID in `src/data/blocks.ts` (never reuse or reorder).
 3. **Terrain / landmarks** → `src/voxel/generator.ts` (keep seed determinism).
