@@ -51,7 +51,8 @@
  * =============================================================================
  */
 import type * as pc from 'playcanvas'
-import type { AssetsHandle, SpawnOptions } from './assets'
+import type { AssetsHandle, SpawnOptions, ModelAsset } from './assets'
+import type { LoadOptions } from './asset-source'
 
 /** What the game asks for. The controller module's states are a subset. */
 export type CharacterState = 'idle' | 'walk' | 'run' | 'jump' | 'fall'
@@ -191,6 +192,18 @@ export interface CharacterHandle {
   /** The exact clip name behind a state, or null. */
   clipFor(state: CharacterState): string | null
   has(state: CharacterState): boolean
+  /** Latest request wins. Failure keeps the old visual; physics/entity remain unchanged. */
+  switchCharacter(source: string | ModelAsset, options?: CharacterSwitchOptions): Promise<boolean>
+  destroy(): void
+}
+
+export interface CharacterSwitchOptions extends LoadOptions {
+  clips?: readonly string[]
+  rigged?: boolean
+  blendTime?: number
+  /** Visual adjustment relative to the stable actor, not a physics resize. */
+  scale?: number | readonly [number, number, number]
+  rotation?: readonly [number, number, number]
 }
 
 /**
@@ -204,19 +217,21 @@ export function spawnCharacter(
   key: string,
   options: CharacterOptions = {}
 ): CharacterHandle {
-  const { clips, rigged, blendTime, ...spawnOptions } = options
+  const { clips, rigged, ...spawnOptions } = options
+  delete spawnOptions.blendTime
+  let blendTime = options.blendTime
 
   // `clips: []` is a decision ("this must not animate"); omitting it is not, so
   // fall back to whatever the manifest actually mapped.
-  const declared = clips === undefined ? assets.clipNames(key) : [...clips]
-  const animated = rigged !== false && declared.length > 0
+  let declared = clips === undefined ? assets.clipNames(key) : [...clips]
+  let animated = rigged !== false && declared.length > 0
 
-  const entity = assets.spawn(key, spawnOptions)
-  const resolved = resolveClips(animated ? declared : [])
+  const entity = assets.spawn(key, animated ? spawnOptions : { ...spawnOptions, animate: false })
+  let resolved = resolveClips(animated ? declared : [])
 
   // With no idle clip the character still has to stand somewhere: the first
   // clip the caller listed. Never a clip that is not in the file.
-  const resting = animated ? resolved.idle ?? declared[0] ?? null : null
+  let resting = animated ? resolved.idle ?? declared[0] ?? null : null
 
   if (animated && assets.clipNames(key).length === 0) {
     console.warn(
@@ -226,6 +241,8 @@ export function spawnCharacter(
   }
 
   let current: CharacterState = 'idle'
+  let revision = 0
+  let destroyed = false
 
   function clipFor(state: CharacterState): string | null {
     if (!animated) return null
@@ -251,6 +268,29 @@ export function spawnCharacter(
     state: () => current,
     clipFor,
     has: (state) => clipFor(state) !== null,
+    async switchCharacter(source, next = {}) {
+      if (destroyed) throw new Error('character: handle destroyed')
+      const request = ++revision
+      const nextKey = typeof source === 'string' ? source : source.key
+      if (typeof source !== 'string') await assets.loadModel(source, next)
+      if (destroyed || request !== revision || next.signal?.aborted) return false
+      const nextClips = next.clips === undefined ? assets.clipNames(nextKey) : [...next.clips]
+      const nextAnimated = next.rigged !== false && nextClips.length > 0
+      assets.replaceModel(entity, nextKey, { scale: next.scale, rotation: next.rotation, animate: nextAnimated })
+      declared = nextClips
+      animated = nextAnimated
+      resolved = resolveClips(animated ? declared : [])
+      resting = animated ? resolved.idle ?? declared[0] ?? null : null
+      blendTime = next.blendTime ?? blendTime
+      play(current)
+      return true
+    },
+    destroy() {
+      if (destroyed) return
+      destroyed = true
+      revision++
+      entity.destroy()
+    },
   }
 }
 
@@ -263,5 +303,5 @@ export function spawnObject(
   key: string,
   options: SpawnOptions = {}
 ): pc.Entity {
-  return assets.spawn(key, options)
+  return assets.spawn(key, { ...options, animate: false })
 }

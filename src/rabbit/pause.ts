@@ -48,6 +48,8 @@
  * =============================================================================
  */
 
+import { runtime } from './runtime'
+
 /** Anything that can be gated — keyboard and touch handles satisfy this. */
 export interface Pausable {
   setPaused(paused: boolean): void
@@ -88,7 +90,8 @@ export function createPause(options: PauseOptions = {}): PauseHandle {
   if (options.onChange) subscribers.add(options.onChange)
   let paused = false
   let localPaused = false
-  let studioPaused = false
+  const reason = Symbol('local pause')
+  let destroyed = false
 
   const overlay = document.createElement('div')
   if (options.overlay !== false) {
@@ -101,8 +104,7 @@ export function createPause(options: PauseOptions = {}): PauseHandle {
     document.body.appendChild(overlay)
   }
 
-  function applyState(): void {
-    const value = localPaused || studioPaused
+  function applyState(value: boolean): void {
     if (paused === value) return
     paused = value
     if (options.overlay !== false) overlay.style.display = paused ? 'flex' : 'none'
@@ -111,43 +113,34 @@ export function createPause(options: PauseOptions = {}): PauseHandle {
   }
 
   function set(value: boolean): void {
+    if (destroyed) return
     localPaused = value
-    applyState()
+    runtime.setPaused(reason, value)
   }
 
   function onKeyDown(event: KeyboardEvent): void {
-    if (!keys.includes(event.code)) return
+    if (event.repeat || !keys.includes(event.code)) return
     event.preventDefault()
     // Studio owns the outer lifecycle. A local key must never wake a game
     // while the parent still requires it to be paused.
-    if (studioPaused) return
-    localPaused = !localPaused
-    applyState()
-  }
-
-  function onMessage(event: MessageEvent): void {
-    const data = event.data as { type?: string; paused?: boolean } | null
-    if (data?.type !== 'rabbit:pause') return
-    studioPaused = data.paused !== false
-    applyState()
+    if (runtime.hostPaused()) return
+    set(!localPaused)
   }
 
   function onBlur(): void {
-    localPaused = true
-    applyState()
+    set(true)
   }
 
   if (keys.length > 0) window.addEventListener('keydown', onKeyDown)
-  window.addEventListener('message', onMessage)
+  const offState = runtime.subscribe((state) => applyState(state.paused))
   if (options.pauseOnBlur === true) window.addEventListener('blur', onBlur)
 
   return {
     isPaused: () => paused,
     set,
     toggle: () => {
-      if (studioPaused) return
-      localPaused = !localPaused
-      applyState()
+      if (runtime.hostPaused()) return
+      set(!localPaused)
     },
     onChange(callback) {
       subscribers.add(callback)
@@ -155,7 +148,11 @@ export function createPause(options: PauseOptions = {}): PauseHandle {
     },
     destroy() {
       window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('message', onMessage)
+      if (destroyed) return
+      destroyed = true
+      runtime.setPaused(reason, false)
+      offState()
+      for (const input of options.inputs ?? []) input.setPaused(false)
       window.removeEventListener('blur', onBlur)
       subscribers.clear()
       overlay.remove()

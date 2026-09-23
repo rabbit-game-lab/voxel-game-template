@@ -38,6 +38,7 @@
  * =============================================================================
  */
 import * as sdk from './sdk'
+import { pauseGate, runtime } from './runtime'
 
 export type SoundGroup = 'music' | 'sfx'
 
@@ -108,6 +109,7 @@ export interface SoundHandle {
   stop(group: SoundGroup): void
   setVolume(group: SoundGroup, volume: number): void
   setMuted(muted: boolean): void
+  setPaused(paused: boolean): void
   destroy(): void
 }
 
@@ -122,11 +124,17 @@ export function createSound(options: SoundOptions = {}): SoundHandle {
   const buffers = new Map<string, AudioBuffer>()
   const current = new Map<SoundGroup, { stop(): void }>()
   let muted = false
+  let localMuted = false
+  let paused = false
+  let destroyed = false
+  let unregisterAudio: (() => void) | undefined
 
   function getCtx(): AudioContext {
+    if (destroyed) throw new Error('sound: handle destroyed')
     if (!ctx) {
       ctx = new AudioContext()
-      sdk.audio.register(ctx)
+      unregisterAudio = sdk.audio.register(ctx, () => !paused)
+      if (paused) void ctx.suspend().catch(() => undefined)
       master = ctx.createGain()
       master.gain.value = muted ? 0 : 1
       master.connect(ctx.destination)
@@ -145,19 +153,18 @@ export function createSound(options: SoundOptions = {}): SoundHandle {
     return groups.get(group) as GainNode
   }
 
-  function onMessage(event: MessageEvent): void {
-    const data = event.data as { type?: string; muted?: boolean; paused?: boolean } | null
-    if (!data || typeof data.type !== 'string') return
-    if (data.type === 'rabbit:mute') setMuted(data.muted !== false)
-    if (data.type === 'rabbit:pause' && ctx) {
-      if (data.paused !== false) void ctx.suspend().catch(() => undefined)
-      else void ctx.resume().catch(() => undefined)
-    }
-  }
-  window.addEventListener('message', onMessage)
+  const gate = pauseGate((value) => {
+    paused = value
+    if (ctx) void (paused ? ctx.suspend() : ctx.resume()).catch(() => undefined)
+  })
+  const offState = runtime.subscribe(() => applyMute())
 
   function setMuted(value: boolean): void {
-    muted = value
+    localMuted = value
+    applyMute()
+  }
+  function applyMute(): void {
+    muted = localMuted || runtime.state().muted
     if (master) master.gain.value = muted ? 0 : 1
   }
 
@@ -275,9 +282,14 @@ export function createSound(options: SoundOptions = {}): SoundHandle {
     },
 
     setMuted,
+    setPaused: gate.set,
 
     destroy() {
-      window.removeEventListener('message', onMessage)
+      if (destroyed) return
+      destroyed = true
+      gate.destroy()
+      offState()
+      unregisterAudio?.()
       for (const handle of current.values()) handle.stop()
       current.clear()
       if (ctx) void ctx.close().catch(() => undefined)

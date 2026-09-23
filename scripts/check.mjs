@@ -16,6 +16,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { profileFailures } from './profile.mjs'
+import { integrityFailures } from './integrity.mjs'
 
 const root = process.cwd()
 const failures = []
@@ -43,6 +44,7 @@ const EMBED_CAPABILITIES = ['audio', 'pointerLock', 'storage']
 
 const requiredFiles = [
   'rabbit.json',
+  '.rabbit-kit.json',
   'AGENTS.md',
   'index.html',
   'package.json',
@@ -80,6 +82,8 @@ try {
 } catch (error) {
   failures.push(`rabbit.json: invalid (${error.message})`)
 }
+
+failures.push(...integrityFailures(root, stack).map(failure => 'kit: ' + failure))
 
 // --- 2. package.json: scripts, node engine, no install hooks ---
 const INSTALL_HOOKS = ['preinstall', 'install', 'postinstall', 'prepare']

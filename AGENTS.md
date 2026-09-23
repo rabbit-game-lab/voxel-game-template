@@ -136,14 +136,15 @@ requests it solves:
 | `character` | an imported GLB as an actor: `play('run')` instead of clip names |
 | `spatial` | Profile spatial-v1 decoration fits (pure TS, no PlayCanvas) |
 
-Pointer lock is **not** an SDK module. `rabbit.json` declares `embed.pointerLock:
-true`, so `requestPointerLock` is allowed; the adapter lives in
-`src/systems/pointer-lock.ts` and is wired from `createInput` in `input.ts`.
+Pointer lock is provided by the SDK. `src/systems/pointer-lock.ts` adapts its
+lifecycle for `createInput`, including capture while the local resume screen is
+paused. A host pause always prevents capture. The manifest declares the feature;
+the browser and parent iframe still decide whether a request is granted.
 
 ## Rules
 
 - **DO NOT EDIT**: `src/main.ts`, anything in `src/rabbit/` (repair with
-  `node ../rabbit-game-kit/bin/rabbit-kit.mjs sync-sdk`), `rabbit.json`,
+  `node ../../tooling/rabbit-game-kit/bin/rabbit-kit.mjs sync-sdk`), `rabbit.json`,
   `scripts/check.mjs`, `scripts/profile.mjs`, `vite.config.ts`, `package.json`
   dependencies unless the platform contract itself changes.
 - Keep `rabbit.json` at `audio: true`, `pointerLock: true`, `storage: false`.
@@ -191,7 +192,7 @@ session state without duplicating listeners or GPU resources.
 ```bash
 npm run check
 npm run build
-node ../rabbit-game-kit/bin/rabbit-kit.mjs verify http://localhost:<port>
+node ../../tooling/rabbit-game-kit/bin/rabbit-kit.mjs verify http://localhost:<port>
 ```
 
 For gameplay, input, camera, environment, or lifecycle work, verify in a
@@ -227,3 +228,11 @@ hero.play('run')
 5. **New creature**: register its stable key, aliases, bounds and defaults in `creatures/catalog.ts`, reuse/add a procedural archetype, then expose it only through `CONFIG.creatures`.
 6. **Performance**: respect `CONFIG.performance.maxChunkRebuildsPerFrame`; pool fragments and reuse chunk entities.
 7. **Kit updates**: after pulling kit changes, run `sync-sdk` and `sync-check` from `rabbit-game-kit`; never patch vendored files by hand.
+
+## SDK 0.8 integration
+
+Read [docs/rabbit-sdk.md](docs/rabbit-sdk.md) for shared lifecycle, required/optional assets, pointer lock and character switching. `.rabbit-kit.json` records the exact source commit and file hashes. Run `rabbit-kit status --check` from a matching kit checkout; `npm run check` also checks the recorded integrity. Do not edit vendored files or their receipt.
+
+## Switching the playable character
+
+For a GLB actor, keep the `CharacterHandle` returned by `spawnCharacter(assets, key, options)` and switch through it: `await hero.switchCharacter('loaded-model-key', { clips: ['Idle', 'Run'] })` uses a model already loaded by the manifest; `{ key: 'visitor', path: '/models/visitor.glb', animations: 'auto' }` loads another asset. External hosts must allow CORS. `clips` are exact clip names in the target file; `animations: 'auto'` lets the SDK map them to semantic states. The wrapper entity, components and physics remain stable, and the current semantic state is replayed on the new visual. Visual `scale`/`rotation` do not resize the collider; failed or superseded requests keep the current model. Use `rigged: false` for a static model. The SDK does not retarget unrelated skeletons.

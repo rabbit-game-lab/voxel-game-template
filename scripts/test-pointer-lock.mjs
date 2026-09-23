@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { createPointerLock } from '../src/systems/pointer-lock.ts'
 
 const previousDocument = globalThis.document
+const previousWindow = globalThis.window
+globalThis.window = new EventTarget()
 let pointerLockElement = null
 const listeners = new Map()
 globalThis.document = {
@@ -13,6 +15,7 @@ globalThis.document = {
 }
 
 const canvas = {
+  ownerDocument: document,
   requestPointerLock() {
     return Promise.reject(Object.assign(new Error('SecurityError'), { name: 'SecurityError' }))
   },
@@ -28,6 +31,7 @@ canvas.requestPointerLock = () => {
   calls += 1
   if (calls === 1) return Promise.reject(new Error('denied'))
   pointerLockElement = canvas
+  listeners.get('pointerlockchange')?.()
   return Promise.resolve()
 }
 assert.equal(await lock.request(), false)
@@ -43,12 +47,13 @@ globalThis.document = {
   featurePolicy: { allowsFeature: () => false },
 }
 const blocked = createPointerLock({
+  ownerDocument: document,
   requestPointerLock() {
     blockedCalls += 1
     return Promise.reject(new Error('policy'))
   },
 })
-assert.equal(blocked.allowed(), false)
+assert.equal(blocked.allowed(), true, 'Capability is available; only the actual request establishes denial')
 assert.equal(await blocked.request(), false)
 assert.equal(blockedCalls, 1, 'Policy reports must not skip the real requestPointerLock call')
 blocked.destroy()
@@ -58,10 +63,12 @@ globalThis.document = {
   featurePolicy: { allowsFeature: () => true },
 }
 const hanging = createPointerLock({
+  ownerDocument: document,
   requestPointerLock() { return new Promise(() => {}) },
 })
 assert.equal(await hanging.request(), false)
 hanging.destroy()
 
 globalThis.document = previousDocument
+globalThis.window = previousWindow
 console.log('Pointer-lock adapter denial/retry scenarios passed.')
