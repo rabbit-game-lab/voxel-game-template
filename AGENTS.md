@@ -232,3 +232,7 @@ hero.play('run')
 ## SDK 0.8 integration
 
 Read [docs/rabbit-sdk.md](docs/rabbit-sdk.md) for shared lifecycle, required/optional assets, pointer lock and character switching. `.rabbit-kit.json` records the exact source commit and file hashes. Run `rabbit-kit status --check` from a matching kit checkout; `npm run check` also checks the recorded integrity. Do not edit vendored files or their receipt.
+
+## Switching the playable character
+
+For a GLB actor, keep the `CharacterHandle` returned by `spawnCharacter(assets, key, options)` and switch through it: `await hero.switchCharacter('loaded-model-key', { clips: ['Idle', 'Run'] })` uses a model already loaded by the manifest; `{ key: 'visitor', path: '/models/visitor.glb', animations: 'auto' }` loads another asset. External hosts must allow CORS. `clips` are exact clip names in the target file; `animations: 'auto'` lets the SDK map them to semantic states. The wrapper entity, components and physics remain stable, and the current semantic state is replayed on the new visual. Visual `scale`/`rotation` do not resize the collider; failed or superseded requests keep the current model. Use `rigged: false` for a static model. The SDK does not retarget unrelated skeletons.
