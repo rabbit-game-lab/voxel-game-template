@@ -22,10 +22,17 @@ let memoryOnly = false
 export const storage = {
   get(key: string): string | null {
     if (memoryStore.has(key)) return memoryStore.get(key) ?? null
-    if (!memoryOnly) {
-      try { return window.localStorage.getItem(key) } catch { memoryOnly = true }
+    // A failed write does not necessarily make reads unavailable (for example,
+    // localStorage can be full). Keep reading uncached keys from disk, and cache
+    // successful reads so they survive a later storage access failure.
+    try {
+      const value = window.localStorage.getItem(key)
+      if (value !== null) memoryStore.set(key, value)
+      return value
+    } catch {
+      memoryOnly = true
+      return null
     }
-    return null
   },
   set(key: string, value: string): void {
     memoryStore.set(key, value)

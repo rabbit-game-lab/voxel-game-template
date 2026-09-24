@@ -40,7 +40,8 @@ export const STYLE_STACKS = Object.freeze({
 })
 
 const PROFILE_KEYS = ['profileVersion', 'worldVersion', 'style', 'surfaces']
-const PROFILE_OPTIONAL_KEYS = ['assetBindings']
+const PROFILE_OPTIONAL_KEYS = ['assetBindings', 'catalog']
+const CATALOG_ROLES = ['objects', 'characters']
 const TARGET_KEYS = ['path', 'symbols']
 const TYPESCRIPT_PATH = /\.(?:ts|tsx|mts)$/
 const IDENTIFIER = /^[$A-Z_a-z][$\w]*$/
@@ -51,6 +52,20 @@ const BINDING_SOURCE_PATH = /^src\/(?!rabbit\/)(?!.*(?:^|\/)(?:generated|dist|bu
 
 function plainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+// Catalog policy is opt-out: `true`, `false`, or per-role booleans where a
+// missing role (or a missing `catalog`) keeps catalog imports allowed.
+function validateCatalog(catalog, failures) {
+  if (typeof catalog === 'boolean') return
+  if (!plainObject(catalog)) {
+    failures.push('topology.catalog must be a boolean or an object')
+    return
+  }
+  for (const [role, allowed] of Object.entries(catalog)) {
+    if (!CATALOG_ROLES.includes(role)) failures.push(`topology.catalog has unknown property "${role}"`)
+    else if (typeof allowed !== 'boolean') failures.push(`topology.catalog.${role} must be boolean`)
+  }
 }
 
 function exactKeys(value, expected, label, failures) {
@@ -393,6 +408,7 @@ export function profileFailures({ root, manifest, manifestBytes }) {
     }
     targets.forEach((target, index) => validateTarget(root, surface, target, index, failures))
   }
+  if (topology.catalog !== undefined) validateCatalog(topology.catalog, failures)
   if (topology.assetBindings !== undefined) {
     if (!Array.isArray(topology.assetBindings)) failures.push('topology.assetBindings must be an array')
     else {
@@ -426,4 +442,11 @@ export function resolveAssetBindings(manifest) {
   if (!plainObject(manifest?.topology)) throw new Error('rabbit.json has no topology profile')
   if (manifest.topology.profileVersion !== PROFILE_VERSION) throw new Error(`unsupported topology profile version "${manifest.topology.profileVersion}"`)
   return (manifest.topology.assetBindings ?? []).map((binding) => structuredClone(binding))
+}
+
+/** Resolve the catalog policy per role; a missing key or role means allowed. */
+export function resolveCatalogPolicy(manifest) {
+  const catalog = manifest?.topology?.catalog
+  if (typeof catalog === 'boolean') return { objects: catalog, characters: catalog }
+  return Object.fromEntries(CATALOG_ROLES.map((role) => [role, catalog?.[role] !== false]))
 }

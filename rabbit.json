@@ -10,6 +10,7 @@
     "profileVersion": 1,
     "worldVersion": 6,
     "style": "voxel-sandbox",
+    "catalog": { "objects": false, "characters": true },
     "surfaces": {
       "player": [
         { "path": "src/game.config.ts", "symbols": ["player"] },
