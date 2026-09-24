@@ -4,7 +4,7 @@
   "sdk": {
     "source": {
       "version": "0.8.0",
-      "commit": "9e3ac3c9fc304517f2105f71be38cfad1f02135a",
+      "commit": "be188c33d4f8198c53b72e824913a52fb3f92c65",
       "dirty": false
     },
     "files": {
@@ -15,7 +15,7 @@
       "src/rabbit/players.ts": "6e0869e1fef7ad90f7a8068ca1063022b8b83b4aaa1786875436c5ca8bc6cd88",
       "src/rabbit/pointer-lock.ts": "7dcc84382530b59b7a5f88544a1a5110133297aaa10bfded8baedb22d4b79b30",
       "src/rabbit/runtime.ts": "b947dcae9e1cb540e2075b3d441228b2f84a07a3be533a3670c4bd224087beb6",
-      "src/rabbit/sdk.ts": "ca193b6488c2a700a6b779311e7c656136f82afb454e270020b276bf0f968981",
+      "src/rabbit/sdk.ts": "b001f8377fc7bec43c840a240b285631ba2b2796e08fa8dbcd55f5cecf518e61",
       "src/rabbit/sound.ts": "6f340fd1edb69edad819fe3b57cf593699cfebfbbeaf0384fb93f936436cb7d3",
       "src/rabbit/spatial.ts": "0f9207852491cf70e1ab655194b3b953e5539a0fd331d6255b8d1d4d7a16f8bd",
       "src/rabbit/touch.ts": "c6c9949f38c39ffc0f62df0184d6def66636efdc778127a3dff3a791266c5731",
@@ -29,12 +29,12 @@
   "check": {
     "source": {
       "version": "0.8.0",
-      "commit": "9e3ac3c9fc304517f2105f71be38cfad1f02135a",
+      "commit": "be188c33d4f8198c53b72e824913a52fb3f92c65",
       "dirty": false
     },
     "files": {
       "scripts/check.mjs": "e1830d125b64d631ab6353593f5397af957166fc0d8d49d21c418c0557cc07c9",
-      "scripts/profile.mjs": "705a8865160b2d88ddb805edc823f525d327087590a8d3107285755653116ba3",
+      "scripts/profile.mjs": "68bb1d633b8fe40042e0705a581c99042513bb5627fe438a58fe70542885efcd",
       "scripts/integrity.mjs": "3e9b2595c6482a0e3352135c2ff4edc0f682b5a99769cbde6771e634ddcd0e0c"
     }
   }
