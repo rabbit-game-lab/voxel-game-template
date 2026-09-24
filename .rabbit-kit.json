@@ -4,7 +4,7 @@
   "sdk": {
     "source": {
       "version": "0.8.0",
-      "commit": "be188c33d4f8198c53b72e824913a52fb3f92c65",
+      "commit": "a106792593f0a3670d8cacd460b0ccbff91ed918",
       "dirty": false
     },
     "files": {
@@ -13,7 +13,7 @@
       "src/rabbit/keyboard.ts": "4a2bc415e1511d824e9562ba04c7cae43b287dca1f39aace4d1a9a211594e721",
       "src/rabbit/pause.ts": "e9ae64a2421762f5b15433d09fc4f25782cc6f9412bd13fe1193413fb30f4ea3",
       "src/rabbit/players.ts": "6e0869e1fef7ad90f7a8068ca1063022b8b83b4aaa1786875436c5ca8bc6cd88",
-      "src/rabbit/pointer-lock.ts": "7dcc84382530b59b7a5f88544a1a5110133297aaa10bfded8baedb22d4b79b30",
+      "src/rabbit/pointer-lock.ts": "0a88fb12ca46f84cd4464782cac768bc814d9eb6c647e5d6ef6a4b2b9d73dccf",
       "src/rabbit/runtime.ts": "b947dcae9e1cb540e2075b3d441228b2f84a07a3be533a3670c4bd224087beb6",
       "src/rabbit/sdk.ts": "b001f8377fc7bec43c840a240b285631ba2b2796e08fa8dbcd55f5cecf518e61",
       "src/rabbit/sound.ts": "6f340fd1edb69edad819fe3b57cf593699cfebfbbeaf0384fb93f936436cb7d3",
@@ -29,7 +29,7 @@
   "check": {
     "source": {
       "version": "0.8.0",
-      "commit": "be188c33d4f8198c53b72e824913a52fb3f92c65",
+      "commit": "a106792593f0a3670d8cacd460b0ccbff91ed918",
       "dirty": false
     },
     "files": {
