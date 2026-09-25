@@ -220,33 +220,30 @@ export const CONFIG = {
   },
   creatures: {
     preset: 'peacefulForest',
+    // Presets hold the hostile population; animals are toggled one by one below.
     presets: {
       empty: { groups: [] },
-      peacefulForest: {
-        groups: [
-          { species: 'horse', count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 4, roamRadius: 8 },
-          { species: 'chicken', count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 3, roamRadius: 6 },
-          { species: 'sheep', count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 3.5, roamRadius: 7 },
-          { species: 'pig', count: 1, zones: ['forest'], scale: 1, minSpacing: 3, roamRadius: 6 },
-          { species: 'dog', count: 1, zones: ['spawn-meadow'], scale: 1, minSpacing: 3, roamRadius: 10 },
-          { species: 'raccoon', count: 1, zones: ['forest'], scale: 1, minSpacing: 3, roamRadius: 7 },
-        ],
-      },
+      peacefulForest: { groups: [] },
       forestAdventure: {
         groups: [
-          { species: 'horse', count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 4, roamRadius: 8 },
-          { species: 'chicken', count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 3, roamRadius: 6 },
-          { species: 'sheep', count: 2, zones: ['forest'], scale: 1, minSpacing: 3.5, roamRadius: 7 },
-          { species: 'pig', count: 1, zones: ['forest'], scale: 1, minSpacing: 3, roamRadius: 6 },
-          { species: 'dog', count: 1, zones: ['spawn-meadow'], scale: 1, minSpacing: 3, roamRadius: 10 },
-          { species: 'raccoon', count: 1, zones: ['forest'], scale: 1, minSpacing: 3, roamRadius: 7 },
-          { species: 'wolf', count: 1, zones: ['highland', 'forest'], scale: 1, minSpacing: 5, roamRadius: 10 },
           { species: 'slime', count: 2, zones: ['shore', 'forest'], scale: 1, minSpacing: 4, roamRadius: 8 },
           { species: 'skeleton', count: 1, zones: ['highland'], scale: 1, minSpacing: 5, roamRadius: 9 },
           { species: 'goblin', count: 1, zones: ['forest'], scale: 1, minSpacing: 5, roamRadius: 9 },
           { species: 'zombie', count: 1, zones: ['coast', 'forest'], scale: 1, minSpacing: 5, roamRadius: 8 },
         ],
       },
+    },
+    // Animals exist in code but only spawn when enabled. Flip `enabled` to true per species;
+    // they are added to whichever preset is active.
+    animals: {
+      horse: { enabled: false, count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 4, roamRadius: 8 },
+      chicken: { enabled: false, count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 3, roamRadius: 6 },
+      sheep: { enabled: false, count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 3.5, roamRadius: 7 },
+      pig: { enabled: false, count: 1, zones: ['forest'], scale: 1, minSpacing: 3, roamRadius: 6 },
+      dog: { enabled: false, count: 1, zones: ['spawn-meadow'], scale: 1, minSpacing: 3, roamRadius: 10 },
+      raccoon: { enabled: false, count: 1, zones: ['forest'], scale: 1, minSpacing: 3, roamRadius: 7 },
+      // Territorial: attacks the player when combat is enabled.
+      wolf: { enabled: false, count: 1, zones: ['highland', 'forest'], scale: 1, minSpacing: 5, roamRadius: 10 },
     },
     // Minecraft-style Iron Golem: follows the player and fights hostile creatures.
     // Flip enabled to true to add it to any preset (use forestAdventure to see it fight).

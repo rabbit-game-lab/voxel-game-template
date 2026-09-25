@@ -4,7 +4,7 @@ import { lakeSignedDistance } from '../environment/lakes'
 import type { GameConfig } from '../game.config'
 import type { VoxelWorld } from '../voxel/world'
 import { creatureSpec } from './catalog'
-import type { CreatureGroupConfig } from './config'
+import type { AnimalConfig, AnimalSpeciesKey, CreatureGroupConfig } from './config'
 import type { CreatureSpawn } from './types'
 
 interface Candidate { x: number; y: number; z: number; zone: WorldZone }
@@ -65,14 +65,35 @@ function bodyClear(world: VoxelWorld, cell: Candidate, height: number): boolean 
   return true
 }
 
-/** Groups of the active preset plus the optional Iron Golem companion. */
-export function creatureGroups(config: GameConfig, presetKey = config.creatures.preset): CreatureGroupConfig[] {
-  const groups: CreatureGroupConfig[] = [...config.creatures.presets[presetKey].groups]
-  const golem = config.creatures.ironGolem
-  if (golem.enabled && !groups.some((group) => group.species === 'ironGolem')) {
-    groups.push({ species: 'ironGolem', count: 1, zones: golem.zones, scale: golem.scale, minSpacing: 3, roamRadius: 8 })
+export interface CreatureGroupEntry {
+  /** Config path that declared the group, for validation messages. */
+  path: string
+  group: CreatureGroupConfig
+}
+
+/** Enabled animals, then the preset's groups, then the optional Iron Golem companion. */
+export function creatureGroupEntries(config: GameConfig, presetKey = config.creatures.preset): CreatureGroupEntry[] {
+  const entries: CreatureGroupEntry[] = []
+  for (const [species, animal] of Object.entries(config.creatures.animals) as [AnimalSpeciesKey, AnimalConfig][]) {
+    if (!animal.enabled) continue
+    const { enabled: _enabled, ...group } = animal
+    entries.push({ path: `creatures.animals.${species}`, group: { species, ...group } })
   }
-  return groups
+  config.creatures.presets[presetKey].groups.forEach((group, index) => {
+    entries.push({ path: `creatures.presets.${presetKey}.groups[${index}]`, group })
+  })
+  const golem = config.creatures.ironGolem
+  if (golem.enabled && !entries.some((entry) => entry.group.species === 'ironGolem')) {
+    entries.push({
+      path: 'creatures.ironGolem',
+      group: { species: 'ironGolem', count: 1, zones: golem.zones, scale: golem.scale, minSpacing: 3, roamRadius: 8 },
+    })
+  }
+  return entries
+}
+
+export function creatureGroups(config: GameConfig, presetKey = config.creatures.preset): CreatureGroupConfig[] {
+  return creatureGroupEntries(config, presetKey).map((entry) => entry.group)
 }
 
 export function planCreatures(world: VoxelWorld, config: GameConfig): CreatureSpawn[] {

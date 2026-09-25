@@ -27,7 +27,8 @@
       "rules": [
         { "path": "src/game.config.ts", "symbols": ["session", "interaction"] },
         { "path": "src/sim/session.ts", "symbols": ["GameSession"] },
-        { "path": "src/game.config.ts", "symbols": ["ironGolem"] },
+        { "path": "src/game.config.ts", "symbols": ["ironGolem", "animals"] },
+        { "path": "src/creatures/planner.ts", "symbols": ["creatureGroupEntries"] },
         { "path": "src/sim/creature-guardian.ts", "symbols": ["stepGuardian", "GUARDIAN"] }
       ],
       "camera": [
