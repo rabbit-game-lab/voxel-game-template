@@ -69,7 +69,7 @@ AI recipes are available in [`content-config.md`](content-config.md).
 - Preset groups select a catalog species, count, zones, optional behavior override, scale, spacing, and roam radius.
 - `combat` controls whether hostile behavior can damage the player, whether friendly animals are damageable, health, damage, and cooldowns.
 - `simulation.decisionHz` throttles AI decisions while fixed-step movement remains at 60 Hz. `sleepDistance` pauses distant creatures.
-- `limits` caps total creatures, enemies, and draw calls before boot.
+- `limits` caps total creatures (`maxCreatures`, default and hard maximum 24), enemies (`maxEnemies`, 6), and draw calls (`maxDrawCalls`, 32) before boot. Only the active preset plus enabled animals and the Iron Golem count; inactive presets never fail on limits.
 - `ironGolem.enabled` (default `false`) adds a Minecraft-style Iron Golem companion that follows the player and fights hostile creatures; `zones` and `scale` tune its spawn.
 
 Catalog keys, aliases, AI recipes, and the missing-species workflow are documented in [`creature-catalog.md`](creature-catalog.md) and [`creature-config.md`](creature-config.md).
