@@ -4,6 +4,7 @@ import { lakeSignedDistance } from '../environment/lakes'
 import type { GameConfig } from '../game.config'
 import type { VoxelWorld } from '../voxel/world'
 import { creatureSpec } from './catalog'
+import type { CreatureGroupConfig } from './config'
 import type { CreatureSpawn } from './types'
 
 interface Candidate { x: number; y: number; z: number; zone: WorldZone }
@@ -57,18 +58,35 @@ function candidates(world: VoxelWorld, config: GameConfig): Candidate[] {
   return result
 }
 
+function bodyClear(world: VoxelWorld, cell: Candidate, height: number): boolean {
+  for (let y = cell.y; y < cell.y + height; y += 1) {
+    if (blockById(world.getBlock(Math.floor(cell.x), y, Math.floor(cell.z))).solid) return false
+  }
+  return true
+}
+
+/** Groups of the active preset plus the optional Iron Golem companion. */
+export function creatureGroups(config: GameConfig, presetKey = config.creatures.preset): CreatureGroupConfig[] {
+  const groups: CreatureGroupConfig[] = [...config.creatures.presets[presetKey].groups]
+  const golem = config.creatures.ironGolem
+  if (golem.enabled && !groups.some((group) => group.species === 'ironGolem')) {
+    groups.push({ species: 'ironGolem', count: 1, zones: golem.zones, scale: golem.scale, minSpacing: 3, roamRadius: 8 })
+  }
+  return groups
+}
+
 export function planCreatures(world: VoxelWorld, config: GameConfig): CreatureSpawn[] {
   const random = randomFactory(config.world.seed + 48121)
   const available = candidates(world, config)
   shuffle(available, random)
   const result: CreatureSpawn[] = []
-  const preset = config.creatures.presets[config.creatures.preset]
-  for (const group of preset.groups) {
+  for (const group of creatureGroups(config)) {
     const spec = creatureSpec(group.species)
     let placed = 0
     for (const cell of available) {
       if (!group.zones.includes(cell.zone)) continue
       if (result.some((other) => Math.hypot(other.x - cell.x, other.z - cell.z) < group.minSpacing)) continue
+      if (!bodyClear(world, cell, spec.height * group.scale)) continue
       result.push({
         id: `${group.species}-${placed}`, species: group.species, category: spec.category,
         behavior: group.behavior ?? spec.behavior, x: cell.x, y: cell.y, z: cell.z,

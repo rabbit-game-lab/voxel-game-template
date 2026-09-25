@@ -19,12 +19,15 @@ The creature catalog is a lightweight library of procedural voxel archetypes. It
 | `zombie` | enemy | chaser-melee | zombie, zombi |
 | `explorer` | character | stationary | explorer, adventurer, explorador |
 | `villager` | character | npc-wander | villager, aldeano, aldeana |
+| `ironGolem` | character | guardian | iron golem, golem, golem de hierro |
 
 Aliases are defined in `src/creatures/catalog.ts`. They let an AI map natural-language requests to a stable `CreatureSpeciesKey`; aliases are never written into saved config.
 
 ## Rendering contract
 
 Built-in species use code-authored voxel meshes from `src/entities/creature-archetypes.ts`. One mesh is created per active species and shared by every instance. Each active creature contributes one draw call and no DOM node, rigidbody, or downloaded file.
+
+The `golem` shape (`src/entities/creature-golem.ts`) is the one exception: a Minecraft-style Iron Golem built on the 1/16-block pixel grid whose arms and legs are separate child parts so they can swing while walking and rise for the two-handed slam attack. Body, arm, and leg meshes are shared by every golem, and each golem costs five draw calls (`creatureDrawCalls()` in the catalog, which the validator sums against `limits.maxDrawCalls`).
 
 The renderer is a read-only mirror of `CreatureSimulation`. Gameplay bounds, health, targeting, and behavior remain engine-independent.
 

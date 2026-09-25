@@ -2,7 +2,7 @@ import type {
   CreatureBehaviorKey, CreatureCategory, CreatureSpeciesKey,
 } from './config'
 
-export type CreatureShape = 'quadruped' | 'bird' | 'humanoid' | 'slime'
+export type CreatureShape = 'quadruped' | 'bird' | 'humanoid' | 'slime' | 'golem'
 
 export interface CreatureSpec {
   key: CreatureSpeciesKey
@@ -46,6 +46,7 @@ export const CREATURE_CATALOG = {
   zombie: spec('zombie', 'Zombie', ['zombie', 'zombi'], 'enemy', 'humanoid', 'chaser-melee', ['#6f9971', '#45586e', '#493c32'], 1.7, 0.42, 1.45, 5, 10, 1.3, 1),
   explorer: spec('explorer', 'Explorer', ['explorer', 'adventurer', 'explorador'], 'character', 'humanoid', 'stationary', ['#d6a06c', '#3f8f86', '#34495e'], 1.72, 0.4, 1.5, 5),
   villager: spec('villager', 'Villager', ['villager', 'aldeano', 'aldeana'], 'character', 'humanoid', 'npc-wander', ['#c88d62', '#9d6849', '#5e7651'], 1.68, 0.4, 1.35, 5),
+  ironGolem: spec('ironGolem', 'Iron Golem', ['iron golem', 'iron-golem', 'golem', 'golem de hierro'], 'character', 'golem', 'guardian', ['#d9d3c7', '#a9a397', '#4f8a3a'], 2.7, 0.7, 2.4, 20, 10, 1.7, 3),
 } as const satisfies Record<CreatureSpeciesKey, CreatureSpec>
 
 export function creatureSpec(key: CreatureSpeciesKey): CreatureSpec {
@@ -58,4 +59,9 @@ export function findCreatureSpecies(name: string): CreatureSpeciesKey | null {
     if (item.key === normalized || item.aliases.includes(normalized)) return item.key
   }
   return null
+}
+
+/** Render parts per instance: golems animate arms and legs as separate shared-mesh parts. */
+export function creatureDrawCalls(key: CreatureSpeciesKey): number {
+  return CREATURE_CATALOG[key].shape === 'golem' ? 5 : 1
 }

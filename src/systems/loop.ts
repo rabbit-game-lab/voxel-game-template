@@ -130,6 +130,7 @@ export function setupGame(app: pc.Application): GameHandle {
   function updatePresentation(current: RuntimeState): void {
     const target = current.session.targetSnapshot().hit
     current.view.setSelection(current.session.phase === 'playing' ? target?.voxel ?? null : null)
+    current.view.setCracks(current.session.miningSnapshot())
     current.view.setSockets(CONFIG.world.beaconSockets.map((socket) =>
       current.session.world.getBlock(socket[0], socket[1], socket[2]) === BLOCKS.crystal.id),
     current.session.isBeaconMission())
@@ -147,6 +148,12 @@ export function setupGame(app: pc.Application): GameHandle {
         current.scene.triggerAvatarAction(event.voxel)
       }
       if (event.type === 'collectible') current.content.setCollectibleActive(event.index, false)
+      if (event.type === 'swing') current.scene.swing()
+      if (event.type === 'dig') {
+        current.audio.play('dig'); current.scene.swing()
+        current.effects.chip(event.voxel, event.face, event.block)
+        current.scene.triggerAvatarAction(event.voxel)
+      }
       if (event.type === 'decoration') {
         current.content.setDecorationActive(event.index, false)
         if (event.reason === 'break') {
@@ -228,7 +235,7 @@ export function setupGame(app: pc.Application): GameHandle {
     const aim = current.scene.updatePlayer(current.session.player, active ? frameDt : 0, active)
     current.session.updateTarget(aim, cameraMode)
     if (!current.pause.isPaused()) {
-      current.session.applyInteraction(snapshot.breakHeld || bufferedBreak, bufferedPlace)
+      current.session.applyInteraction(snapshot.breakHeld || bufferedBreak, bufferedPlace, frameDt)
       bufferedPlace = false; bufferedBreak = false
       processEvents(current)
       current.view.update()

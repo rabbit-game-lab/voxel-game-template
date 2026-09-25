@@ -1,4 +1,5 @@
 import { BLOCKS, isBlockKey } from '../data/blocks'
+import { PICKAXE_TIERS } from '../data/tools'
 import type { LakeConfig } from '../environment/config'
 import type { GameConfig } from '../game.config'
 import { CHUNK_SIZE } from '../voxel/constants'
@@ -35,6 +36,11 @@ export function validateConfig(config: GameConfig, modelKeys: readonly string[] 
   positive('interaction.reach', config.interaction.reach)
   positive('interaction.breakInterval', config.interaction.breakInterval)
   positive('interaction.placeCooldown', config.interaction.placeCooldown)
+  if (!(config.interaction.mining.pickaxe in PICKAXE_TIERS)) {
+    errors.push(`interaction.mining.pickaxe must be one of ${Object.keys(PICKAXE_TIERS).join(', ')}`)
+  }
+  const timeScale = config.interaction.mining.timeScale
+  if (!finite(timeScale) || timeScale <= 0 || timeScale > 4) errors.push('interaction.mining.timeScale must be in (0, 4]')
   positive('performance.maxChunkRebuildsPerFrame', config.performance.maxChunkRebuildsPerFrame)
 
   if (config.player.eyeHeight <= 0 || config.player.eyeHeight >= config.player.bodyHeight) {

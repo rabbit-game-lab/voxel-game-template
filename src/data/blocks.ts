@@ -11,6 +11,10 @@ export interface BlockSpec {
   readonly breakable: boolean
   readonly placeable: boolean
   readonly drop: string | null
+  /** Minecraft-style hardness: seconds to break by hand ≈ hardness × 1.5. */
+  readonly hardness: number
+  /** Tool that speeds up breaking; any other tool (or the hand) mines at base speed. */
+  readonly tool: 'pickaxe' | null
   readonly tiles: {
     readonly top: AtlasTile
     readonly side: AtlasTile
@@ -25,51 +29,61 @@ const faces = (all: AtlasTile): BlockSpec['tiles'] => ({ top: all, side: all, bo
 export const BLOCKS = {
   air: {
     id: 0, label: 'Air', solid: false, breakable: false, placeable: false, drop: null,
+    hardness: 0, tool: null,
     renderLayer: 'hidden', raycastable: false, replaceable: true, occludesFaces: false,
     tiles: faces(tile(0, 0)),
   },
   grass: {
     id: 1, label: 'Grass', solid: true, breakable: true, placeable: true, drop: 'dirt',
+    hardness: 0.6, tool: null,
     renderLayer: 'opaque', raycastable: true, replaceable: false, occludesFaces: true,
     tiles: { top: tile(0, 3), side: tile(3, 0), bottom: tile(2, 0) },
   },
   dirt: {
     id: 2, label: 'Dirt', solid: true, breakable: true, placeable: true, drop: 'dirt',
+    hardness: 0.5, tool: null,
     renderLayer: 'opaque', raycastable: true, replaceable: false, occludesFaces: true,
     tiles: faces(tile(2, 0)),
   },
   stone: {
     id: 3, label: 'Stone', solid: true, breakable: true, placeable: true, drop: 'stone',
+    hardness: 1.5, tool: 'pickaxe',
     renderLayer: 'opaque', raycastable: true, replaceable: false, occludesFaces: true,
     tiles: faces(tile(2, 1)),
   },
   planks: {
     id: 4, label: 'Planks', solid: true, breakable: true, placeable: true, drop: 'planks',
+    hardness: 2, tool: null,
     renderLayer: 'opaque', raycastable: true, replaceable: false, occludesFaces: true,
     tiles: faces(tile(1, 2)),
   },
   crystal: {
     id: 5, label: 'Crystal', solid: true, breakable: true, placeable: true, drop: 'crystal',
+    hardness: 3, tool: 'pickaxe',
     renderLayer: 'opaque', raycastable: true, replaceable: false, occludesFaces: true,
     tiles: faces(tile(1, 0)),
   },
   bedrock: {
     id: 6, label: 'Bedrock', solid: true, breakable: false, placeable: false, drop: null,
+    hardness: 0, tool: null,
     renderLayer: 'opaque', raycastable: true, replaceable: false, occludesFaces: true,
     tiles: faces(tile(2, 4)),
   },
   water: {
     id: 7, label: 'Water', solid: false, breakable: false, placeable: false, drop: null,
+    hardness: 0, tool: null,
     renderLayer: 'liquid', raycastable: false, replaceable: true, occludesFaces: false,
     tiles: faces(tile(0, 0)),
   },
   wood: {
     id: 8, label: 'Wood', solid: true, breakable: true, placeable: true, drop: 'wood',
+    hardness: 2, tool: null,
     renderLayer: 'opaque', raycastable: true, replaceable: false, occludesFaces: true,
     tiles: { top: tile(1, 4), side: tile(0, 2), bottom: tile(1, 4) },
   },
   leaves: {
     id: 9, label: 'Leaves', solid: true, breakable: true, placeable: false, drop: null,
+    hardness: 0.2, tool: null,
     renderLayer: 'opaque', raycastable: true, replaceable: false, occludesFaces: true,
     tiles: faces(tile(1, 3)),
   },

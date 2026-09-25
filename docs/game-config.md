@@ -24,6 +24,14 @@
 - Studio resume does not bypass the local Continue/capture step.
 - `V`, the HUD button, and gamepad `Y` switch views when switching is enabled.
 
+## Mining and the pickaxe
+
+- Blocks break progressively like Minecraft: hold the break action (left mouse button, the ⛏ touch button, or gamepad RT) and cracks spread through ten destroy stages before the block breaks. Releasing, aiming at another block, or the block changing restarts from zero.
+- Break time is `hardness × 1.5 ÷ toolSpeed × interaction.mining.timeScale` seconds. Hardness lives with each block in `src/data/blocks.ts` (grass 0.6, dirt 0.5, stone 1.5, planks/wood 2, crystal 3, leaves 0.2). Only blocks whose `tool` is `pickaxe` (stone, crystal) benefit from the pickaxe; everything else is mined at hand speed.
+- `interaction.mining.pickaxe` accepts `none`, `wood`, `stone`, `iron`, `gold`, or `diamond` (speeds 1, 2, 4, 6, 12, 8, as in Minecraft). It also selects the head color of the pixel-art pickaxe shown in first person (view model) and in the procedural avatar's hand; `none` shows the bare arm. Defaults to `stone`: stone breaks in about 0.56 s, dirt in 0.75 s, wood in 3 s.
+- `interaction.mining.timeScale` in `(0, 4]` multiplies every break time; `0.5` mines twice as fast.
+- `interaction.breakInterval` is the pause after a block breaks before the next one starts cracking (and the cadence for decorations, which still break instantly). Creatures still take one hit per `playerAttackCooldown`.
+
 ## Avatar
 
 - `player.avatar.renderer` accepts `procedural` or `gltf`. It does not change the AABB, physics, or simulation.
@@ -61,6 +69,7 @@ AI recipes are available in [`content-config.md`](content-config.md).
 - `combat` controls whether hostile behavior can damage the player, whether friendly animals are damageable, health, damage, and cooldowns.
 - `simulation.decisionHz` throttles AI decisions while fixed-step movement remains at 60 Hz. `sleepDistance` pauses distant creatures.
 - `limits` caps total creatures, enemies, and draw calls before boot.
+- `ironGolem.enabled` (default `false`) adds a Minecraft-style Iron Golem companion that follows the player and fights hostile creatures; `zones` and `scale` tune its spawn.
 
 Catalog keys, aliases, AI recipes, and the missing-species workflow are documented in [`creature-catalog.md`](creature-catalog.md) and [`creature-config.md`](creature-config.md).
 

@@ -56,9 +56,16 @@ try {
     assert.ok(item)
     session.updateTarget(aimDown(item), 'first-person')
     assert.deepEqual(session.targetSnapshot().hit?.voxel, { x: item.x, y: item.y - 1, z: item.z })
-    session.applyInteraction(true, false)
-    assert.equal(session.decorationActiveSnapshot()[index], false)
+    // Blocks break progressively: the first frame only starts cracking the grass.
+    session.applyInteraction(true, false, 1 / 60)
+    assert.equal(session.decorationActiveSnapshot()[index], true)
+    assert.equal(session.miningSnapshot()?.stage, 0)
     const events = session.consumeEvents()
+    for (let frame = 0; frame < 120 && session.decorationActiveSnapshot()[index]; frame += 1) {
+      session.applyInteraction(true, false, 1 / 60)
+      events.push(...session.consumeEvents())
+    }
+    assert.equal(session.decorationActiveSnapshot()[index], false)
     assert.ok(events.some((event) => event.type === 'edit' && event.action === 'break'))
     assert.ok(events.some((event) =>
       event.type === 'decoration' && event.index === index && event.reason === 'unsupported'))

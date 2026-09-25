@@ -1,4 +1,5 @@
 import type { BlockKey } from './data/blocks'
+import type { PickaxeTier } from './data/tools'
 import type { AvatarConfig, CameraConfig } from './camera/config'
 import type { EnvironmentConfig } from './environment/config'
 import type { ContentConfig } from './content/config'
@@ -30,7 +31,10 @@ export interface GameConfig {
     beaconSockets: readonly Vec3[]; crystalNodes: readonly Vec3[]
     startingInventory: Readonly<Partial<Record<BlockKey, number>>>
   }
-  interaction: { reach: number; breakInterval: number; placeCooldown: number }
+  interaction: {
+    reach: number; breakInterval: number; placeCooldown: number
+    mining: { pickaxe: PickaxeTier; timeScale: number }
+  }
   hud: { heartbeat: number }
   environment: EnvironmentConfig
   content: ContentConfig
@@ -111,7 +115,13 @@ export const CONFIG = {
       bedrock: 0, leaves: 0, water: 0, air: 0,
     },
   },
-  interaction: { reach: 6, breakInterval: 0.18, placeCooldown: 0.15 },
+  interaction: {
+    reach: 6, breakInterval: 0.18, placeCooldown: 0.15,
+    // Blocks crack and break progressively (Minecraft hardness). The pickaxe tier
+    // ('none' | 'wood' | 'stone' | 'iron' | 'gold' | 'diamond') speeds up stone and crystal;
+    // timeScale multiplies every break time (0.5 = twice as fast).
+    mining: { pickaxe: 'stone', timeScale: 1 },
+  },
   hud: { heartbeat: 0.25 },
   environment: {
     sky: {
@@ -238,12 +248,15 @@ export const CONFIG = {
         ],
       },
     },
+    // Minecraft-style Iron Golem: follows the player and fights hostile creatures.
+    // Flip enabled to true to add it to any preset (use forestAdventure to see it fight).
+    ironGolem: { enabled: false, zones: ['spawn-meadow'], scale: 1 },
     combat: {
       enabled: true, animalsDamageable: false, playerMaxHealth: 5,
       playerAttackDamage: 1, playerAttackCooldown: 0.32, enemyAttackCooldown: 1.1,
     },
     simulation: { decisionHz: 10, sleepDistance: 30 },
-    limits: { maxCreatures: 16, maxEnemies: 6, maxDrawCalls: 20 },
+    limits: { maxCreatures: 16, maxEnemies: 6, maxDrawCalls: 24 },
   },
   visual: {
     topTint: 1, sideTint: 0.88, darkSideTint: 0.8, bottomTint: 0.65,

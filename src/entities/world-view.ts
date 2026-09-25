@@ -6,6 +6,8 @@ import type { GameConfig } from '../game.config'
 import type { ChunkCoord, VoxelCoord } from '../voxel/coords'
 import { chunkKey } from '../voxel/coords'
 import { buildChunkMesh, buildLiquidChunkMesh } from '../voxel/mesher'
+import type { MiningSnapshot } from '../sim/mining'
+import { createBlockCracks } from './block-cracks'
 import type { VoxelWorld } from '../voxel/world'
 
 interface ChunkRender {
@@ -20,6 +22,7 @@ export interface WorldViewHandle {
   markDirty(coords: readonly ChunkCoord[]): void
   update(): void
   setSelection(voxel: VoxelCoord | null): void
+  setCracks(mining: MiningSnapshot | null): void
   setSockets(occupied: readonly boolean[], visible?: boolean): void
   setTimeOfDay(mode: TimeOfDay): void
   stats(): {
@@ -156,6 +159,7 @@ export function createWorldView(
   selection.enabled = false
   root.addChild(selection)
   for (const instance of selection.render!.meshInstances) instance.renderStyle = pc.RENDERSTYLE_WIREFRAME
+  const cracks = createBlockCracks(root, app.graphicsDevice)
 
   const socketMaterials = config.world.beaconSockets.map(() => makeMat(config.visual.socket, {
     emissive: config.visual.socket, emissiveIntensity: 2, opacity: 0.62,
@@ -202,6 +206,7 @@ export function createWorldView(
       selection.enabled = voxel !== null
       if (voxel) selection.setLocalPosition(voxel.x + 0.5, voxel.y + 0.5, voxel.z + 0.5)
     },
+    setCracks: (mining) => cracks.set(mining),
     setSockets(occupied, visible = true) {
       socketMarkers.forEach((marker, index) => { marker.enabled = visible && !occupied[index] })
     },
@@ -219,7 +224,7 @@ export function createWorldView(
     destroy() {
       root.destroy()
       material.destroy(); liquidMaterial.destroy()
-      selectionMaterial.destroy()
+      selectionMaterial.destroy(); cracks.destroy()
       socketMaterials.forEach((item) => item.destroy())
       for (const render of chunkRenders.values()) {
         render.opaqueMesh.destroy(); render.liquidMesh.destroy()

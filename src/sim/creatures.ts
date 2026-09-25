@@ -5,18 +5,20 @@ import type { CreatureHit, CreatureState } from '../creatures/types'
 import type { GameConfig } from '../game.config'
 import type { VoxelCoord } from '../voxel/coords'
 import type { VoxelWorld } from '../voxel/world'
+import { launchFrom, stepGuardian, type GuardianMotor } from './creature-guardian'
+import { flatDistance, isHostileCreature, type RuntimeCreature } from './creature-runtime'
 
-interface RuntimeCreature extends CreatureState {
-  directionX: number
-  directionZ: number
-  decisionRemaining: number
-  attackRemaining: number
-}
+const LAUNCH_GRAVITY = 25
 
 export interface CreatureAttackResult {
   damage: number
   attacker: string
 }
+
+/** Creature-vs-creature outcomes the session turns into sounds, particles and notices. */
+export type CreatureSimEvent =
+  | { type: 'guardianStrike'; guardian: string; target: string; index: number; defeated: boolean; position: VoxelCoord }
+  | { type: 'guardianDown'; guardian: string; index: number; position: VoxelCoord }
 
 export interface CreatureDamageResult {
   accepted: boolean
@@ -75,6 +77,11 @@ export class CreatureSimulation {
   private random: () => number
   private items: RuntimeCreature[] = []
   private decisionAccumulator = 0
+  private events: CreatureSimEvent[] = []
+  private readonly motor: GuardianMotor = {
+    move: (item, speed, dt) => this.move(item, speed, dt),
+    teleportNear: (item, anchor) => this.teleportNear(item, anchor),
+  }
 
   constructor(private readonly world: VoxelWorld, private readonly config: GameConfig) {
     this.random = randomFactory(config.world.seed + 71933)
@@ -84,12 +91,20 @@ export class CreatureSimulation {
     this.random = randomFactory(this.config.world.seed + 71933)
     this.items = planCreatures(this.world, this.config).map((spawn) => ({
       ...spawn, spawnX: spawn.x, spawnY: spawn.y, spawnZ: spawn.z,
-      health: creatureSpec(spawn.species).health, active: true, moving: false, phase: 0,
+      health: creatureSpec(spawn.species).health, active: true, moving: false, phase: 0, swing: 0,
       directionX: -Math.sin(spawn.yaw * Math.PI / 180),
       directionZ: -Math.cos(spawn.yaw * Math.PI / 180),
       decisionRemaining: this.random() * 1.5, attackRemaining: 0,
+      targetIndex: -1, stuckTime: 0, airborne: false, launchX: 0, launchY: 0, launchZ: 0,
     }))
     this.decisionAccumulator = 0
+    this.events = []
+  }
+
+  consumeEvents(): CreatureSimEvent[] {
+    const events = this.events
+    this.events = []
+    return events
   }
 
   states(): readonly CreatureState[] {
@@ -97,8 +112,7 @@ export class CreatureSimulation {
   }
 
   hasHostiles(): boolean {
-    return this.config.creatures.combat.enabled && this.items.some((item) =>
-      item.category === 'enemy' || item.behavior === 'territorial' || item.behavior === 'chaser-melee')
+    return this.config.creatures.combat.enabled && this.items.some(isHostileCreature)
   }
 
   step(player: VoxelCoord, dt: number): CreatureAttackResult | null {
@@ -107,26 +121,40 @@ export class CreatureSimulation {
     const decide = this.decisionAccumulator >= decisionStep
     if (decide) this.decisionAccumulator %= decisionStep
     let attack: CreatureAttackResult | null = null
-    for (const item of this.items) {
-      if (!item.active) continue
+    this.items.forEach((item, index) => {
+      if (!item.active) return
       item.attackRemaining = Math.max(0, item.attackRemaining - dt)
+      item.swing = Math.max(0, item.swing - dt)
+      if (item.airborne) { this.stepAirborne(item, dt); return }
       this.settleVertical(item, dt)
-      const dx = player.x - item.x; const dz = player.z - item.z
-      const playerDistance = Math.hypot(dx, dz)
-      if (playerDistance > this.config.creatures.simulation.sleepDistance) {
-        item.moving = false; continue
-      }
       const spec = creatureSpec(item.species)
-      if (decide) this.chooseDirection(item, dx, dz, playerDistance, decisionStep)
+      if (item.behavior === 'guardian') {
+        const action = stepGuardian(item, this.items, player, dt, decide, this.motor, this.config)
+        if (action) this.strike(item, action.targetIndex)
+        item.phase += dt * (item.moving ? 8 : 2)
+        return
+      }
+      if (flatDistance(item, player) > this.config.creatures.simulation.sleepDistance) {
+        item.moving = false; return
+      }
+      // Hostiles turn on a guardian that is engaging them when it is closer than the player.
+      const guardian = this.engagingGuardian(index)
+      const focus = guardian && flatDistance(item, guardian) < flatDistance(item, player) ? guardian : player
+      const dx = focus.x - item.x; const dz = focus.z - item.z
+      const focusDistance = Math.hypot(dx, dz)
+      if (decide) this.chooseDirection(item, dx, dz, focusDistance, decisionStep)
       const hostile = this.config.creatures.combat.enabled &&
         (item.behavior === 'chaser-melee' || item.behavior === 'territorial')
-      if (hostile && playerDistance <= spec.attackRange * item.scale && item.attackRemaining <= 0) {
+      const reach = spec.attackRange * item.scale +
+        (focus === guardian ? creatureSpec(guardian.species).radius * guardian.scale : 0)
+      if (hostile && focusDistance <= reach && item.attackRemaining <= 0) {
         item.attackRemaining = this.config.creatures.combat.enemyAttackCooldown
-        item.moving = false
-        attack ??= { damage: spec.attackDamage, attacker: spec.label }
+        item.moving = false; item.swing = 0.4
+        if (guardian && focus === guardian) this.hitGuardian(guardian, spec.attackDamage)
+        else attack ??= { damage: spec.attackDamage, attacker: spec.label }
       } else this.move(item, spec.moveSpeed, dt)
       item.phase += dt * (item.moving ? 8 : 2)
-    }
+    })
     return attack
   }
 
@@ -151,8 +179,8 @@ export class CreatureSimulation {
     if (!item?.active) return { accepted: false, defeated: false, label: '', category: 'animal' }
     const spec = creatureSpec(item.species)
     const accepted = this.config.creatures.combat.enabled && (
-      item.category === 'enemy' || item.behavior === 'territorial' || item.behavior === 'chaser-melee' ||
-      this.config.creatures.combat.animalsDamageable
+      isHostileCreature(item) ||
+      (this.config.creatures.combat.animalsDamageable && item.behavior !== 'guardian')
     )
     if (!accepted) return { accepted: false, defeated: false, label: spec.label, category: item.category }
     item.health = Math.max(0, item.health - amount)
@@ -170,6 +198,74 @@ export class CreatureSimulation {
         item.y + spec.height * item.scale > voxel.y && item.y < voxel.y + 1 &&
         item.z + radius > voxel.z && item.z - radius < voxel.z + 1
     })
+  }
+
+  private engagingGuardian(index: number): RuntimeCreature | null {
+    return this.items.find((item) => item.active && item.behavior === 'guardian' && item.targetIndex === index) ?? null
+  }
+
+  private strike(guardian: RuntimeCreature, targetIndex: number): void {
+    const target = this.items[targetIndex]
+    if (!target?.active) return
+    const spec = creatureSpec(guardian.species); const targetSpec = creatureSpec(target.species)
+    target.health = Math.max(0, target.health - spec.attackDamage)
+    target.active = target.health > 0
+    if (target.active) launchFrom(guardian, target)
+    else { target.moving = false; guardian.targetIndex = -1 }
+    this.events.push({
+      type: 'guardianStrike', guardian: spec.label, target: targetSpec.label, index: targetIndex,
+      defeated: !target.active, position: { x: target.x, y: target.y + 0.5, z: target.z },
+    })
+  }
+
+  private hitGuardian(guardian: RuntimeCreature, damage: number): void {
+    guardian.health = Math.max(0, guardian.health - damage)
+    if (guardian.health > 0) return
+    guardian.active = false; guardian.moving = false
+    this.events.push({
+      type: 'guardianDown', guardian: creatureSpec(guardian.species).label, index: this.items.indexOf(guardian),
+      position: { x: guardian.x, y: guardian.y + 1, z: guardian.z },
+    })
+  }
+
+  private stepAirborne(item: RuntimeCreature, dt: number): void {
+    item.launchY -= LAUNCH_GRAVITY * dt
+    const nextX = item.x + item.launchX * dt; const nextZ = item.z + item.launchZ * dt
+    if (this.bodyBlocked(nextX, item.y, nextZ, item)) { item.launchX = 0; item.launchZ = 0 }
+    else { item.x = nextX; item.z = nextZ }
+    const nextY = item.y + item.launchY * dt
+    if (item.launchY > 0) {
+      if (this.bodyBlocked(item.x, nextY, item.z, item)) item.launchY = 0
+      else item.y = nextY
+      return
+    }
+    const ground = this.groundBelow(item.x, item.z, item.y)
+    if (ground !== null && nextY <= ground + 1) {
+      item.y = ground + 1; item.airborne = false
+      item.launchX = item.launchY = item.launchZ = 0
+      return
+    }
+    item.y = nextY
+    if (item.y < this.world.bounds.min.y - 4) { item.active = false; item.airborne = false }
+  }
+
+  private teleportNear(item: RuntimeCreature, anchor: VoxelCoord): boolean {
+    const base = Math.atan2(item.x - anchor.x, item.z - anchor.z)
+    for (const radius of [2.2, 3.2]) {
+      for (let step = 0; step < 8; step += 1) {
+        const angle = base + (step % 2 === 0 ? 1 : -1) * Math.ceil(step / 2) * Math.PI / 4
+        const x = anchor.x + Math.sin(angle) * radius; const z = anchor.z + Math.cos(angle) * radius
+        const ground = this.groundNear(x, z, anchor.y + 1)
+        if (ground === null) continue
+        if (this.world.getBlock(Math.floor(x), ground + 1, Math.floor(z)) === BLOCKS.water.id) continue
+        if (this.bodyBlocked(x, ground + 1, z, item)) continue
+        item.x = x; item.y = ground + 1; item.z = z
+        item.directionX = 0; item.directionZ = 0
+        item.yaw = Math.atan2(-(anchor.x - x), -(anchor.z - z)) * 180 / Math.PI
+        return true
+      }
+    }
+    return false
   }
 
   private chooseDirection(item: RuntimeCreature, dx: number, dz: number, distance: number, step: number): void {
@@ -223,14 +319,18 @@ export class CreatureSimulation {
   }
 
   private settleVertical(item: RuntimeCreature, dt: number): void {
-    const x = Math.floor(item.x); const z = Math.floor(item.z)
     const supportY = Math.floor(item.y - 0.05)
-    if (blockById(this.world.getBlock(x, supportY, z)).solid) return
-    let ground: number | null = null
-    for (let y = supportY - 1; y >= this.world.bounds.min.y; y -= 1) {
-      if (blockById(this.world.getBlock(x, y, z)).solid) { ground = y; break }
-    }
+    if (blockById(this.world.getBlock(Math.floor(item.x), supportY, Math.floor(item.z))).solid) return
+    const ground = this.groundBelow(item.x, item.z, item.y)
     if (ground !== null) item.y = Math.max(ground + 1, item.y - 10 * dt)
+  }
+
+  private groundBelow(x: number, z: number, fromY: number): number | null {
+    const voxelX = Math.floor(x); const voxelZ = Math.floor(z)
+    for (let y = Math.floor(fromY - 0.05); y >= this.world.bounds.min.y; y -= 1) {
+      if (blockById(this.world.getBlock(voxelX, y, voxelZ)).solid) return y
+    }
+    return null
   }
 
   private groundNear(x: number, z: number, referenceY: number): number | null {

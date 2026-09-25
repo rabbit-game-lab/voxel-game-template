@@ -26,7 +26,9 @@
       ],
       "rules": [
         { "path": "src/game.config.ts", "symbols": ["session", "interaction"] },
-        { "path": "src/sim/session.ts", "symbols": ["GameSession"] }
+        { "path": "src/sim/session.ts", "symbols": ["GameSession"] },
+        { "path": "src/game.config.ts", "symbols": ["ironGolem"] },
+        { "path": "src/sim/creature-guardian.ts", "symbols": ["stepGuardian", "GUARDIAN"] }
       ],
       "camera": [
         { "path": "src/game.config.ts", "symbols": ["camera"] },
@@ -39,7 +41,8 @@
       "presentation": [
         { "path": "src/game.config.ts", "symbols": ["environment", "visual", "audio"] },
         { "path": "src/entities/environment.ts", "symbols": ["createEnvironment"] },
-        { "path": "src/systems/hud.ts", "symbols": ["createHud"] }
+        { "path": "src/systems/hud.ts", "symbols": ["createHud"] },
+        { "path": "src/entities/creature-golem.ts", "symbols": ["createGolemMeshes", "poseGolem"] }
       ]
     }
   }
