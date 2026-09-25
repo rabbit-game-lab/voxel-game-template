@@ -40,6 +40,19 @@ try {
   }
 
   {
+    // Limits only apply to the active preset: a big animal population fits under peacefulForest
+    // even though the same animals plus forestAdventure would exceed maxCreatures.
+    const config = structuredClone(CONFIG)
+    for (const key of animals) config.creatures.animals[key].enabled = true
+    config.creatures.animals.horse.count = 12
+    assert.doesNotThrow(() => validateConfig(config))
+    assert.equal(species(new GameSession(config)).length, 20)
+    config.creatures.preset = 'forestAdventure'
+    assert.throws(() => validateConfig(config),
+      /creature preset forestAdventure has 25 creatures .* but creatures\.limits allows 24/)
+  }
+
+  {
     // Enabling the wolf alone makes the population hostile (health HUD appears).
     const config = structuredClone(CONFIG)
     config.creatures.animals.wolf.enabled = true

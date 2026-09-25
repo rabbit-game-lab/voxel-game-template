@@ -253,7 +253,7 @@ export const CONFIG = {
       playerAttackDamage: 1, playerAttackCooldown: 0.32, enemyAttackCooldown: 1.1,
     },
     simulation: { decisionHz: 10, sleepDistance: 30 },
-    limits: { maxCreatures: 16, maxEnemies: 6, maxDrawCalls: 24 },
+    limits: { maxCreatures: 24, maxEnemies: 6, maxDrawCalls: 32 },
   },
   visual: {
     topTint: 1, sideTint: 0.88, darkSideTint: 0.8, bottomTint: 0.65,

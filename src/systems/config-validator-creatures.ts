@@ -68,10 +68,18 @@ export function validateCreaturesConfig(config: GameConfig): string[] {
       if (group.species in CREATURE_CATALOG) drawCalls += group.count * creatureDrawCalls(group.species)
       if (CREATURE_CATALOG[group.species]?.category === 'enemy') enemies += group.count
     }
-    const suffix = ' (including enabled creatures.animals and creatures.ironGolem)'
-    if (total > creatures.limits.maxCreatures) errors.push(`creature preset ${presetKey} exceeds maxCreatures${suffix}`)
-    if (enemies > creatures.limits.maxEnemies) errors.push(`creature preset ${presetKey} exceeds maxEnemies${suffix}`)
-    if (drawCalls > creatures.limits.maxDrawCalls) errors.push(`creature preset ${presetKey} exceeds maxDrawCalls${suffix}`)
+    // Every preset is checked for invalid groups, but limits only apply to the population
+    // that actually spawns: the active preset plus enabled animals and the golem.
+    if (presetKey !== creatures.preset) continue
+    const over = (label: string, value: number, limit: number): void => {
+      if (value > limit) {
+        errors.push(`creature preset ${presetKey} has ${value} ${label} (enabled creatures.animals and ` +
+          `creatures.ironGolem included) but creatures.limits allows ${limit}`)
+      }
+    }
+    over('creatures', total, creatures.limits.maxCreatures)
+    over('enemies', enemies, creatures.limits.maxEnemies)
+    over('draw calls', drawCalls, creatures.limits.maxDrawCalls)
   }
   return errors
 }

@@ -110,6 +110,6 @@ Golem fights only happen while `combat.enabled` is true. Internal follow/telepor
 
 ## Performance and lifecycle
 
-AI decisions run at `decisionHz`; movement stays in the fixed simulation step. Creatures beyond `sleepDistance` stop updating until the player returns. The delivered limits allow at most 16 active creatures, six enemies, and 24 creature draw calls (an Iron Golem uses five). Every animal enabled plus `forestAdventure` plus the golem is exactly 16 creatures and 20 draw calls; raise `limits` before adding more.
+AI decisions run at `decisionHz`; movement stays in the fixed simulation step. Creatures beyond `sleepDistance` stop updating until the player returns. The delivered limits allow at most 24 active creatures (the hard maximum), six enemies, and 32 creature draw calls (an Iron Golem uses five). Limits are checked only against the population that actually spawns: the active preset plus enabled animals and the golem. Inactive presets are still checked for invalid groups but never fail on limits. Every animal enabled plus `forestAdventure` plus the golem is 16 creatures and 20 draw calls, leaving room for eight more creatures.
 
 Spawn planning is deterministic for `world.seed`. Creatures avoid water, steep steps, solid body cells, the immediate spawn clearing, and non-grass surfaces. Pause freezes simulation and rendering. Restart regenerates the initial population without recreating materials or meshes; ordinary respawn preserves the current population unless the world itself is regenerated.
