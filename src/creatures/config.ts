@@ -25,9 +25,17 @@ export interface CreaturePresetConfig {
   groups: readonly CreatureGroupConfig[]
 }
 
+/** Iron Golem guardian companion, added on top of whichever preset is active. */
+export interface IronGolemConfig {
+  enabled: boolean
+  zones: readonly WorldZone[]
+  scale: number
+}
+
 export interface CreaturesConfig {
   preset: CreaturePresetKey
   presets: Readonly<Record<CreaturePresetKey, CreaturePresetConfig>>
+  ironGolem: IronGolemConfig
   combat: {
     enabled: boolean
     animalsDamageable: boolean

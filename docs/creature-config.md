@@ -5,8 +5,8 @@
 ## Presets
 
 - `empty`: no creatures and zero creature draw calls.
-- `peacefulForest`: the default; horses, chickens, sheep, a pig, a dog, a raccoon, and an Iron Golem companion.
-- `forestAdventure`: the peaceful population plus a wolf, slimes, skeleton, goblin, and zombie for the golem to fight.
+- `peacefulForest`: the default; horses, chickens, sheep, a pig, a dog, and a raccoon.
+- `forestAdventure`: the peaceful population plus a wolf, slimes, skeleton, goblin, and zombie.
 
 Switch the entire population with one edit:
 
@@ -64,6 +64,17 @@ Available behavior keys are `grazer`, `wanderer`, `skittish`, `companion`, `terr
 Enemy and territorial behavior only damages the player when `combat.enabled` is true. Friendly animals reject attacks by default through `animalsDamageable: false`. Primary action attacks a targeted damageable creature; otherwise it retains the existing block/decor break behavior.
 
 ### Guardian (Iron Golem)
+
+The Iron Golem companion is **disabled by default**. Enable it with one edit; it is added on top of whichever preset is active (use `forestAdventure` to give it enemies to fight):
+
+```ts
+creatures: {
+  ironGolem: { enabled: true, zones: ['spawn-meadow'], scale: 1 },
+  // keep the existing preset, presets, combat, simulation and limits
+}
+```
+
+`zones` chooses where it spawns (the spawn meadow keeps it next to the player) and `scale` accepts `[0.5, 2]`. When enabled it counts toward `limits.maxCreatures` and uses five of `limits.maxDrawCalls`; the validator reports a preset that no longer fits. The binding is declared in `rabbit.json` (`rules` → `src/game.config.ts#ironGolem` and `src/sim/creature-guardian.ts`, `presentation` → `src/entities/creature-golem.ts`).
 
 `guardian` is the Iron Golem's default behavior. The golem:
 

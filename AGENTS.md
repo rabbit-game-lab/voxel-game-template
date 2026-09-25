@@ -96,6 +96,7 @@ ranges live in `docs/game-config.md`.
 | Sky, day/night, lakes, clouds, ambience | `CONFIG.environment` |
 | Forest/minimal density, colors, landmarks, collectibles | `CONFIG.content` |
 | Animals, enemies, NPCs, behavior and combat | `CONFIG.creatures` |
+| Iron Golem companion on/off | `CONFIG.creatures.ironGolem.enabled` |
 | Sandbox/beacon/collect objective | `CONFIG.mission` |
 | Block tints, selection colors | `CONFIG.visual` |
 | Volumes | `CONFIG.audio` |

@@ -4,6 +4,7 @@ import { lakeSignedDistance } from '../environment/lakes'
 import type { GameConfig } from '../game.config'
 import type { VoxelWorld } from '../voxel/world'
 import { creatureSpec } from './catalog'
+import type { CreatureGroupConfig } from './config'
 import type { CreatureSpawn } from './types'
 
 interface Candidate { x: number; y: number; z: number; zone: WorldZone }
@@ -64,13 +65,22 @@ function bodyClear(world: VoxelWorld, cell: Candidate, height: number): boolean 
   return true
 }
 
+/** Groups of the active preset plus the optional Iron Golem companion. */
+export function creatureGroups(config: GameConfig, presetKey = config.creatures.preset): CreatureGroupConfig[] {
+  const groups: CreatureGroupConfig[] = [...config.creatures.presets[presetKey].groups]
+  const golem = config.creatures.ironGolem
+  if (golem.enabled && !groups.some((group) => group.species === 'ironGolem')) {
+    groups.push({ species: 'ironGolem', count: 1, zones: golem.zones, scale: golem.scale, minSpacing: 3, roamRadius: 8 })
+  }
+  return groups
+}
+
 export function planCreatures(world: VoxelWorld, config: GameConfig): CreatureSpawn[] {
   const random = randomFactory(config.world.seed + 48121)
   const available = candidates(world, config)
   shuffle(available, random)
   const result: CreatureSpawn[] = []
-  const preset = config.creatures.presets[config.creatures.preset]
-  for (const group of preset.groups) {
+  for (const group of creatureGroups(config)) {
     const spec = creatureSpec(group.species)
     let placed = 0
     for (const cell of available) {

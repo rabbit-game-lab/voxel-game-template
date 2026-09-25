@@ -13,10 +13,22 @@ try {
 
   const find = (session, species) => session.creatures.states().findIndex((item) => item.species === species)
   const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z)
-
-  for (const preset of ['peacefulForest', 'forestAdventure']) {
+  const withGolem = (preset = CONFIG.creatures.preset) => {
     const config = structuredClone(CONFIG)
     config.creatures.preset = preset
+    config.creatures.ironGolem.enabled = true
+    return config
+  }
+
+  {
+    // Disabled by default: no golem unless CONFIG.creatures.ironGolem.enabled is true.
+    assert.equal(CONFIG.creatures.ironGolem.enabled, false)
+    const session = new GameSession(structuredClone(CONFIG))
+    assert.equal(find(session, 'ironGolem'), -1)
+  }
+
+  for (const preset of ['peacefulForest', 'forestAdventure']) {
+    const config = withGolem(preset)
     assert.doesNotThrow(() => validateConfig(config), `${preset} config is valid`)
     const session = new GameSession(config)
     session.begin()
@@ -27,7 +39,7 @@ try {
 
   {
     // Companion: follows the player and never falls far behind.
-    const session = new GameSession(structuredClone(CONFIG))
+    const session = new GameSession(withGolem())
     session.begin()
     const golem = session.creatures.states()[find(session, 'ironGolem')]
     for (let step = 0; step < 60 * 6; step += 1) session.stepMovement(walk, 1 / 60)
@@ -38,9 +50,7 @@ try {
 
   {
     // Guardian: hunts hostile creatures near the player and defeats them.
-    const config = structuredClone(CONFIG)
-    config.creatures.preset = 'forestAdventure'
-    const session = new GameSession(config)
+    const session = new GameSession(withGolem('forestAdventure'))
     session.begin()
     const states = session.creatures.states()
     const golem = states[find(session, 'ironGolem')]
@@ -61,7 +71,7 @@ try {
 
   {
     // Friendly: the player cannot damage the golem, even with animalsDamageable.
-    const config = structuredClone(CONFIG)
+    const config = withGolem()
     config.creatures.combat.animalsDamageable = true
     const session = new GameSession(config)
     session.begin()
@@ -71,7 +81,7 @@ try {
 
   {
     // Restart restores the golem deterministically.
-    const session = new GameSession(structuredClone(CONFIG))
+    const session = new GameSession(withGolem())
     session.begin()
     const index = find(session, 'ironGolem')
     const first = { ...session.creatures.states()[index] }
