@@ -11,7 +11,7 @@ import type { MissionSnapshot } from './mission'
 export type GamePhase = 'focus' | 'playing' | 'victory' | 'defeat'
 export type InputDevice = 'keyboard' | 'touch' | 'gamepad'
 export type SoundType = 'jump' | 'splash' | 'break' | 'place' | 'crystal' | 'pickup' |
-  'discovery' | 'respawn' | 'invalid' | 'victory' | 'defeat' | 'creatureHit' | 'creatureDefeat' | 'playerHurt'
+  'discovery' | 'respawn' | 'invalid' | 'victory' | 'defeat' | 'creatureHit' | 'creatureDefeat' | 'playerHurt' | 'dig'
 
 export interface InputSnapshot {
   moveX: number
@@ -78,6 +78,8 @@ export type GameEvent =
   | { type: 'respawn' }
   | { type: 'creature'; index: number; action: 'hit' | 'defeat'; position: VoxelCoord }
   | { type: 'phase'; phase: GamePhase }
+  | { type: 'swing' }
+  | { type: 'dig'; voxel: VoxelCoord; face: VoxelCoord; block: BlockKey }
 
 export interface AimRay {
   origin: VoxelCoord

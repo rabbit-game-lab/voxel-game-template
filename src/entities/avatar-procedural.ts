@@ -52,16 +52,28 @@ export function createProceduralAvatar(parent: pc.Entity, config: GameConfig): A
     parent: rightLeg, material: materials.boots, position: [0, -0.58, -0.035], scale: [0.18, 0.18, 0.27],
   })
 
+  const hand = new pc.Entity('Right Hand')
+  hand.setLocalPosition(0, -0.56, -0.02)
+  rightArm.addChild(hand)
+  let rightArmPitch = 0
+  let swing = 0
+
   function pose(left: number, right: number, arms = -left): void {
     leftLeg.setLocalEulerAngles(left, 0, 0)
     rightLeg.setLocalEulerAngles(right, 0, 0)
     leftArm.setLocalEulerAngles(arms, 0, 0)
-    rightArm.setLocalEulerAngles(-arms, 0, 0)
+    rightArmPitch = -arms
+    rightArm.setLocalEulerAngles(rightArmPitch + Math.sin(swing * Math.PI) * 95, 0, 0)
   }
 
   return {
     entity: model,
     drawCalls: 9,
+    hand,
+    setSwing(amount) {
+      swing = amount
+      rightArm.setLocalEulerAngles(rightArmPitch + Math.sin(swing * Math.PI) * 95, 0, 0)
+    },
     setMotion(motion, phase) {
       model.setLocalPosition(0, motion === 'idle' ? Math.sin(phase) * spec.animation.idleBob : 0, 0)
       if (motion === 'idle') pose(0, 0, Math.sin(phase * 0.55) * 3)

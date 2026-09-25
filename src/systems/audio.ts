@@ -38,6 +38,9 @@ export function createGameAudio(config: GameConfig): AudioHandle {
         case 'break':
           sound.noise({ duration: 0.11, filter: 'lowpass', freq: 950, freqTo: 280, volume: 0.055 })
           break
+        case 'dig':
+          sound.noise({ duration: 0.05, filter: 'bandpass', freq: 620, freqTo: 380, volume: 0.03 })
+          break
         case 'place':
           sound.noise({ duration: 0.07, filter: 'bandpass', freq: 420, volume: 0.04 })
           break

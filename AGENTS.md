@@ -93,6 +93,7 @@ ranges live in `docs/game-config.md`.
 | Touch size, gamepad dead zone | `CONFIG.controls` |
 | World size, spawn, landmarks, starting blocks | `CONFIG.world` |
 | Reach, break/place cadence | `CONFIG.interaction` |
+| Pickaxe tier, break speed | `CONFIG.interaction.mining` |
 | Sky, day/night, lakes, clouds, ambience | `CONFIG.environment` |
 | Forest/minimal density, colors, landmarks, collectibles | `CONFIG.content` |
 | Animals, enemies, NPCs, behavior and combat | `CONFIG.creatures` |

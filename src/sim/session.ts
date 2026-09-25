@@ -15,9 +15,10 @@ import { raycastVoxels } from '../voxel/raycast'
 import { VoxelWorld } from '../voxel/world'
 import { CollectibleStore, DiscoveryStore } from './exploration'
 import { CreatureSimulation } from './creatures'
-import { creatureEventOutcome } from './creature-events'
+import { creatureEventOutcome, playerAttackOutcome } from './creature-events'
 import { creatureSpec } from '../creatures/catalog'
 import { MissionController } from './mission'
+import { breakSeconds, MiningProgress, type MiningSnapshot } from './mining'
 import { collidesAt, createPlayer, playerIntersectsVoxel, stepPlayer } from './player'
 import type {
   AimRay, GameEvent, GamePhase, HudSnapshot, InputDevice, InputSnapshot,
@@ -48,6 +49,7 @@ export class GameSession {
   private noticeRemaining = 0
   private health: number
   private creatureAttackCooldown = 0
+  private readonly mining = new MiningProgress()
 
   constructor(private readonly config: GameConfig) {
     this.world = new VoxelWorld(config.world.min, config.world.size)
@@ -69,7 +71,7 @@ export class GameSession {
     this.player = createPlayer(this.config)
     this.phase = 'focus'
     this.selectedSlot = 1
-    this.breakCooldown = 0; this.placeCooldown = 0
+    this.breakCooldown = 0; this.placeCooldown = 0; this.mining.reset()
     this.aimRay = null
     this.cameraMode = this.config.camera.initialMode
     this.events.length = 0
@@ -137,10 +139,16 @@ export class GameSession {
     this.aimRay = aimRay; this.cameraMode = cameraMode; this.refreshTarget()
   }
 
-  applyInteraction(breakHeld: boolean, placePressed: boolean): void {
-    if (this.phase !== 'playing') return
-    if (breakHeld && this.breakCooldown <= 0) this.breakTarget()
+  /** `dt` advances progressive block breaking while the break action is held. */
+  applyInteraction(breakHeld: boolean, placePressed: boolean, dt = 0): void {
+    if (this.phase !== 'playing') { this.mining.reset(); return }
+    if (!breakHeld) this.mining.reset()
+    else if (this.breakCooldown <= 0) this.breakTarget(dt)
     if (placePressed && this.placeCooldown <= 0) this.placeTarget()
+  }
+
+  miningSnapshot(): MiningSnapshot | null {
+    return this.phase === 'playing' ? this.mining.snapshot() : null
   }
 
   targetSnapshot(): TargetSnapshot {
@@ -238,42 +246,37 @@ export class GameSession {
     return HOTBAR_BLOCKS[this.selectedSlot]
   }
 
-  private breakTarget(): void {
-    this.breakCooldown = this.config.interaction.breakInterval
+  private breakTarget(dt: number): void {
     const creature = this.target.creature
+    if (creature || this.target.decoration) {
+      this.mining.reset(); this.breakCooldown = this.config.interaction.breakInterval
+    }
     if (creature) {
       if (this.creatureAttackCooldown > 0) return
       this.creatureAttackCooldown = this.config.creatures.combat.playerAttackCooldown
-      const state = this.creatures.states()[creature.index]
-      const result = this.creatures.damage(creature.index, this.config.creatures.combat.playerAttackDamage)
-      if (!result.accepted) {
-        this.events.push({ type: 'sound', sound: 'invalid' })
-        this.setNotice(`${result.label} es amistoso`, 'combat', 1.2)
-      } else {
-        this.events.push({ type: 'sound', sound: result.defeated ? 'creatureDefeat' : 'creatureHit' })
-        this.events.push({
-          type: 'creature', index: creature.index, action: result.defeated ? 'defeat' : 'hit',
-          position: { x: state.x, y: state.y + 0.5, z: state.z },
-        })
-        this.setNotice(result.defeated ? `${result.label} derrotado` : `Golpeaste a ${result.label}`, 'combat', 1.1)
-      }
-      this.refreshTarget()
-      return
+      const outcome = playerAttackOutcome(this.creatures, creature.index, this.config.creatures.combat.playerAttackDamage)
+      this.events.push({ type: 'swing' }, ...outcome.events)
+      if (outcome.notice) this.setNotice(outcome.notice, 'combat', outcome.seconds)
+      this.refreshTarget(); return
     }
     const decoration = this.target.decoration
     if (decoration) {
       this.removeDecoration(decoration.index, 'break')
-      this.events.push({ type: 'sound', sound: 'break' })
-      this.refreshTarget()
-      return
+      this.events.push({ type: 'sound', sound: 'break' }, { type: 'swing' })
+      this.refreshTarget(); return
     }
     const hit = this.target.hit
-    if (!hit) return
+    if (!hit) { this.mining.reset(); return }
     const currentId = this.world.getBlock(hit.voxel.x, hit.voxel.y, hit.voxel.z)
     const spec = blockById(currentId)
     if (!spec.breakable || (spec.drop !== null && !isBlockKey(spec.drop))) {
-      this.events.push({ type: 'sound', sound: 'invalid' }); return
+      this.mining.reset(); this.breakCooldown = this.config.interaction.breakInterval
+      this.events.push({ type: 'sound', sound: 'invalid' }, { type: 'swing' }); return
     }
+    const progress = this.mining.step(hit.voxel, currentId, breakSeconds(spec, this.config), dt)
+    if (progress.hit) this.events.push({ type: 'dig', voxel: hit.voxel, face: hit.adjacent, block: blockKeyById(currentId) })
+    if (!progress.done) return
+    this.mining.reset(); this.breakCooldown = this.config.interaction.breakInterval
     const replacement = naturalReplacementAt(this.config, hit.voxel.x, hit.voxel.y, hit.voxel.z)
     const edit = this.world.setBlock(hit.voxel.x, hit.voxel.y, hit.voxel.z, replacement)
     if (!edit.changed) return
@@ -323,7 +326,7 @@ export class GameSession {
       this.events.push({ type: 'sound', sound: 'invalid' }); return
     }
     this.inventory[key] -= 1
-    this.events.push({ type: 'sound', sound: 'place' })
+    this.events.push({ type: 'sound', sound: 'place' }, { type: 'swing' })
     this.events.push({ type: 'edit', action: 'place', dirtyChunks: edit.dirtyChunks, voxel: hit.adjacent, block: key })
     this.evaluateMission(); this.refreshTarget()
   }
@@ -373,7 +376,7 @@ export class GameSession {
     if (!this.config.session.respawn.keepBlockInventory) this.resetInventory()
     this.player = createPlayer(this.config)
     this.target = { hit: null, decoration: null, creature: null, label: '' }; this.aimRay = null
-    this.breakCooldown = 0; this.placeCooldown = 0
+    this.breakCooldown = 0; this.placeCooldown = 0; this.mining.reset()
     this.health = this.config.creatures.combat.playerMaxHealth
     this.events.push({ type: 'respawn' })
     if (worldReset || !this.config.session.respawn.keepCollectibles) {
