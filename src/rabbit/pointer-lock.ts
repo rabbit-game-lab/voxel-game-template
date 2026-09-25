@@ -1,4 +1,4 @@
-/** Pointer lock with explicit user-gesture requests and an unlocked fallback. */
+/** Pointer lock: look only while locked; Escape (browser) or release()/host pause unlocks. */
 import { runtime } from './runtime'
 
 export type PointerLockState = 'unsupported' | 'idle' | 'requesting' | 'locked' | 'denied'
@@ -52,12 +52,11 @@ export function createPointerLock(element: HTMLElement, options: PointerLockOpti
   const onError = () => denied()
   doc.addEventListener('pointerlockchange', changed)
   doc.addEventListener('pointerlockerror', onError)
-  window.addEventListener('blur', release)
   const off = runtime.subscribe(() => { if (blocked()) release() })
   return {
     state: () => current,
     locked: () => !destroyed && doc.pointerLockElement === element,
-    /** Call directly in pointerdown/click; denial resolves false for drag/touch fallback. */
+    /** Call in pointerdown/click. Look only while locked(); do not add hover/drag look. */
     request(): Promise<boolean> {
       if (destroyed || current === 'unsupported' || blocked()) return Promise.resolve(false)
       if (doc.pointerLockElement === element) return Promise.resolve(true)
@@ -83,7 +82,6 @@ export function createPointerLock(element: HTMLElement, options: PointerLockOpti
       off()
       doc.removeEventListener('pointerlockchange', changed)
       doc.removeEventListener('pointerlockerror', onError)
-      window.removeEventListener('blur', release)
     },
   }
 }

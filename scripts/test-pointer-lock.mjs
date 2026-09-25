@@ -37,6 +37,8 @@ canvas.requestPointerLock = () => {
 assert.equal(await lock.request(), false)
 assert.equal(await lock.request(), true)
 assert.equal(lock.locked(), true)
+window.dispatchEvent(new Event('blur'))
+assert.equal(lock.locked(), true, 'Window blur must not drop pointer lock; Escape does')
 lock.release()
 assert.equal(lock.locked(), false)
 lock.destroy()
