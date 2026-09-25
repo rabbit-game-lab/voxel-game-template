@@ -1,7 +1,9 @@
 import type { WorldZone } from '../content/config'
 
+export type AnimalSpeciesKey = 'horse' | 'chicken' | 'sheep' | 'pig' | 'dog' | 'raccoon' | 'wolf'
+
 export type CreatureSpeciesKey =
-  | 'horse' | 'chicken' | 'sheep' | 'pig' | 'dog' | 'raccoon' | 'wolf'
+  | AnimalSpeciesKey
   | 'slime' | 'skeleton' | 'goblin' | 'zombie'
   | 'explorer' | 'villager' | 'ironGolem'
 
@@ -25,6 +27,11 @@ export interface CreaturePresetConfig {
   groups: readonly CreatureGroupConfig[]
 }
 
+/** One animal species, spawned on top of the active preset only while `enabled` is true. */
+export interface AnimalConfig extends Omit<CreatureGroupConfig, 'species'> {
+  enabled: boolean
+}
+
 /** Iron Golem guardian companion, added on top of whichever preset is active. */
 export interface IronGolemConfig {
   enabled: boolean
@@ -35,6 +42,7 @@ export interface IronGolemConfig {
 export interface CreaturesConfig {
   preset: CreaturePresetKey
   presets: Readonly<Record<CreaturePresetKey, CreaturePresetConfig>>
+  animals: Readonly<Record<AnimalSpeciesKey, AnimalConfig>>
   ironGolem: IronGolemConfig
   combat: {
     enabled: boolean

@@ -1,6 +1,6 @@
 import { CREATURE_CATALOG, creatureDrawCalls } from '../creatures/catalog'
 import type { CreatureBehaviorKey } from '../creatures/config'
-import { creatureGroups } from '../creatures/planner'
+import { creatureGroupEntries } from '../creatures/planner'
 import type { WorldZone } from '../content/config'
 import type { GameConfig } from '../game.config'
 
@@ -46,12 +46,16 @@ export function validateCreaturesConfig(config: GameConfig): string[] {
     if (!golem.zones.length || golem.zones.some((zone) => !ZONES.includes(zone))) errors.push('creatures.ironGolem.zones is invalid')
     if (!Number.isFinite(golem.scale) || golem.scale < 0.5 || golem.scale > 2) errors.push('creatures.ironGolem.scale must be in [0.5, 2]')
   }
+  for (const [species, animal] of Object.entries(creatures.animals)) {
+    if (CREATURE_CATALOG[species as keyof typeof CREATURE_CATALOG]?.category !== 'animal') {
+      errors.push(`creatures.animals.${species} is not an animal species`)
+    }
+    if (typeof animal.enabled !== 'boolean') errors.push(`creatures.animals.${species}.enabled must be boolean`)
+  }
   for (const presetKey of Object.keys(creatures.presets) as (keyof typeof creatures.presets)[]) {
     let total = 0; let enemies = 0; let drawCalls = 0
     const ids = new Set<string>()
-    const presetGroups = creatures.presets[presetKey].groups.length
-    for (const [index, group] of creatureGroups(config, presetKey).entries()) {
-      const path = index < presetGroups ? `creatures.presets.${presetKey}.groups[${index}]` : 'creatures.ironGolem'
+    for (const { path, group } of creatureGroupEntries(config, presetKey)) {
       if (!(group.species in CREATURE_CATALOG)) errors.push(`${path}.species is not registered`)
       if (!Number.isInteger(group.count) || group.count < 0) errors.push(`${path}.count must be a non-negative integer`)
       if (group.behavior && !BEHAVIORS.includes(group.behavior)) errors.push(`${path}.behavior is invalid`)
@@ -59,12 +63,12 @@ export function validateCreaturesConfig(config: GameConfig): string[] {
       if (!Number.isFinite(group.scale) || group.scale < 0.5 || group.scale > 2) errors.push(`${path}.scale must be in [0.5, 2]`)
       if (!Number.isFinite(group.minSpacing) || group.minSpacing < 1 || group.minSpacing > 16) errors.push(`${path}.minSpacing must be in [1, 16]`)
       if (!Number.isFinite(group.roamRadius) || group.roamRadius < 1 || group.roamRadius > 24) errors.push(`${path}.roamRadius must be in [1, 24]`)
-      if (ids.has(group.species)) errors.push(`${path}.species is duplicated; combine it into one group`)
+      if (ids.has(group.species)) errors.push(`${path}.species is duplicated; declare animals only in creatures.animals`)
       ids.add(group.species); total += group.count
       if (group.species in CREATURE_CATALOG) drawCalls += group.count * creatureDrawCalls(group.species)
       if (CREATURE_CATALOG[group.species]?.category === 'enemy') enemies += group.count
     }
-    const suffix = golem?.enabled ? ' (including creatures.ironGolem)' : ''
+    const suffix = ' (including enabled creatures.animals and creatures.ironGolem)'
     if (total > creatures.limits.maxCreatures) errors.push(`creature preset ${presetKey} exceeds maxCreatures${suffix}`)
     if (enemies > creatures.limits.maxEnemies) errors.push(`creature preset ${presetKey} exceeds maxEnemies${suffix}`)
     if (drawCalls > creatures.limits.maxDrawCalls) errors.push(`creature preset ${presetKey} exceeds maxDrawCalls${suffix}`)

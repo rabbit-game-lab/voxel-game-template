@@ -64,7 +64,8 @@ AI recipes are available in [`content-config.md`](content-config.md).
 
 ## Creatures
 
-- `creatures.preset` accepts `empty`, `peacefulForest`, or `forestAdventure`.
+- `creatures.preset` accepts `empty`, `peacefulForest` (default, no enemies), or `forestAdventure` (slimes, skeleton, goblin, zombie).
+- `creatures.animals.<species>.enabled` (default `false` for every species) turns on horses, chickens, sheep, a pig, a dog, a raccoon, or a wolf; enabled animals are added to the active preset.
 - Preset groups select a catalog species, count, zones, optional behavior override, scale, spacing, and roam radius.
 - `combat` controls whether hostile behavior can damage the player, whether friendly animals are damageable, health, damage, and cooldowns.
 - `simulation.decisionHz` throttles AI decisions while fixed-step movement remains at 60 Hz. `sleepDistance` pauses distant creatures.

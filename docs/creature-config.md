@@ -2,22 +2,48 @@
 
 `CONFIG.creatures` is the only public tuning surface for animals, enemies, and NPC-style characters. Species internals live in the catalog; presets only decide what appears and how it is distributed.
 
+The final population is built in this order (`creatureGroupEntries()` in `src/creatures/planner.ts`):
+
+1. every animal whose `creatures.animals.<species>.enabled` is `true`;
+2. the groups of the active `creatures.preset`;
+3. the Iron Golem, when `creatures.ironGolem.enabled` is `true`.
+
+## Animals
+
+Animals (`horse`, `chicken`, `sheep`, `pig`, `dog`, `raccoon`, `wolf`) live in code but are **disabled by default**, like the Iron Golem. Each species has its own switch in `CONFIG.creatures.animals` and is added on top of whichever preset is active:
+
+```ts
+creatures: {
+  animals: {
+    horse: { enabled: true, count: 2, zones: ['spawn-meadow', 'forest'], scale: 1, minSpacing: 4, roamRadius: 8 },
+    dog: { enabled: true, count: 1, zones: ['spawn-meadow'], scale: 1, minSpacing: 3, roamRadius: 10 },
+    // …the other species keep enabled: false
+  },
+}
+```
+
+Each entry takes the same fields as a preset group (below) plus `enabled`. With every animal disabled the default world has no creatures and zero creature draw calls. The `wolf` is territorial: enabling it makes the population hostile and shows the health HUD while `combat.enabled` is true.
+
+Declare animals only here: a species that also appears in a preset group is reported as duplicated. The binding is declared in `rabbit.json` (`rules` → `src/game.config.ts#animals` and `src/creatures/planner.ts#creatureGroupEntries`).
+
 ## Presets
 
-- `empty`: no creatures and zero creature draw calls.
-- `peacefulForest`: the default; horses, chickens, sheep, a pig, a dog, and a raccoon.
-- `forestAdventure`: the peaceful population plus a wolf, slimes, skeleton, goblin, and zombie.
+Presets hold the hostile population:
 
-Switch the entire population with one edit:
+- `empty`: no preset creatures.
+- `peacefulForest`: the default; no enemies.
+- `forestAdventure`: slimes, a skeleton, a goblin, and a zombie.
+
+Switch the hostile population with one edit:
 
 ```ts
 creatures: {
   preset: 'forestAdventure',
-  // keep the existing presets, combat, simulation and limits
+  // keep the existing presets, animals, combat, simulation and limits
 }
 ```
 
-Every preset is complete. There are no implicit merges between presets.
+Presets do not inherit from each other; animals and the golem are layered on top of whichever one is active.
 
 ## Groups
 
@@ -31,7 +57,7 @@ Each group contains:
 - `minSpacing`: minimum spawn distance from every other creature.
 - `roamRadius`: maximum ordinary wandering distance from its spawn.
 
-Example: add three villagers without changing simulation code:
+Example: add three villagers to a preset without changing simulation code:
 
 ```ts
 {
@@ -44,17 +70,10 @@ Example: add three villagers without changing simulation code:
 }
 ```
 
-Example: make a pony from the horse asset:
+Example: make ponies from the horse asset in `creatures.animals`:
 
 ```ts
-{
-  species: 'horse',
-  count: 1,
-  zones: ['spawn-meadow'],
-  scale: 0.75,
-  minSpacing: 4,
-  roamRadius: 6,
-}
+horse: { enabled: true, count: 1, zones: ['spawn-meadow'], scale: 0.75, minSpacing: 4, roamRadius: 6 },
 ```
 
 ## Behavior and combat
@@ -70,7 +89,7 @@ The Iron Golem companion is **disabled by default**. Enable it with one edit; it
 ```ts
 creatures: {
   ironGolem: { enabled: true, zones: ['spawn-meadow'], scale: 1 },
-  // keep the existing preset, presets, combat, simulation and limits
+  // keep the existing preset, presets, animals, combat, simulation and limits
 }
 ```
 
@@ -91,6 +110,6 @@ Golem fights only happen while `combat.enabled` is true. Internal follow/telepor
 
 ## Performance and lifecycle
 
-AI decisions run at `decisionHz`; movement stays in the fixed simulation step. Creatures beyond `sleepDistance` stop updating until the player returns. The delivered limits allow at most 16 active creatures, six enemies, and 24 creature draw calls (an Iron Golem uses five).
+AI decisions run at `decisionHz`; movement stays in the fixed simulation step. Creatures beyond `sleepDistance` stop updating until the player returns. The delivered limits allow at most 16 active creatures, six enemies, and 24 creature draw calls (an Iron Golem uses five). Every animal enabled plus `forestAdventure` plus the golem is exactly 16 creatures and 20 draw calls; raise `limits` before adding more.
 
 Spawn planning is deterministic for `world.seed`. Creatures avoid water, steep steps, solid body cells, the immediate spawn clearing, and non-grass surfaces. Pause freezes simulation and rendering. Restart regenerates the initial population without recreating materials or meshes; ordinary respawn preserves the current population unless the world itself is regenerated.

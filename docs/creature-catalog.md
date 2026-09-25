@@ -36,7 +36,7 @@ The renderer is a read-only mirror of `CreatureSimulation`. Gameplay bounds, hea
 1. Append its stable key to `CreatureSpeciesKey`.
 2. Register label, aliases, category, shape, colors, bounds, movement, health, and behavior in `CREATURE_CATALOG`.
 3. Reuse an existing procedural shape or add a focused builder in `creature-archetypes.ts`.
-4. Add the species to a group in `CONFIG.creatures`.
+4. Add the species to a preset group in `CONFIG.creatures` (or, for an animal, add its key to `AnimalSpeciesKey` and an entry with `enabled` to `CONFIG.creatures.animals`).
 5. Run validation, build, audit, and visually inspect scale, ground contact, targeting, water avoidance, pause, and restart.
 
 An imported animated GLB can be introduced as another renderer backend later. It must use Rabbit assets/character helpers, document provenance in `THIRD_PARTY.md`, load only when selected, and preserve the catalog's simulation bounds.
