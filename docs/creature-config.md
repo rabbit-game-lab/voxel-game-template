@@ -5,8 +5,8 @@
 ## Presets
 
 - `empty`: no creatures and zero creature draw calls.
-- `peacefulForest`: the default; horses, chickens, sheep, a pig, a dog, and a raccoon.
-- `forestAdventure`: the peaceful population plus a wolf, slimes, skeleton, goblin, and zombie.
+- `peacefulForest`: the default; horses, chickens, sheep, a pig, a dog, a raccoon, and an Iron Golem companion.
+- `forestAdventure`: the peaceful population plus a wolf, slimes, skeleton, goblin, and zombie for the golem to fight.
 
 Switch the entire population with one edit:
 
@@ -59,14 +59,27 @@ Example: make a pony from the horse asset:
 
 ## Behavior and combat
 
-Available behavior keys are `grazer`, `wanderer`, `skittish`, `companion`, `territorial`, `chaser-melee`, `stationary`, and `npc-wander`.
+Available behavior keys are `grazer`, `wanderer`, `skittish`, `companion`, `territorial`, `chaser-melee`, `stationary`, `npc-wander`, and `guardian`.
 
 Enemy and territorial behavior only damages the player when `combat.enabled` is true. Friendly animals reject attacks by default through `animalsDamageable: false`. Primary action attacks a targeted damageable creature; otherwise it retains the existing block/decor break behavior.
+
+### Guardian (Iron Golem)
+
+`guardian` is the Iron Golem's default behavior. The golem:
+
+- follows the player (walks when more than 4.5 blocks away, stops at 3, speeds up when far behind) and never sleeps;
+- teleports next to the player when left more than 22 blocks behind or stuck, like a Minecraft pet;
+- engages hostile creatures (enemies and territorial animals) within its detection range and within 14 blocks of the player, raising both arms and slamming them for `attackDamage` every `enemyAttackCooldown` seconds;
+- launches struck creatures up and away, Minecraft style;
+- is friendly: the player cannot damage it, even with `animalsDamageable: true`;
+- takes hits from the hostiles it is fighting, regenerates slowly out of combat, and stays down until restart if defeated.
+
+Golem fights only happen while `combat.enabled` is true. Internal follow/teleport distances live in `GUARDIAN` inside `src/sim/creature-guardian.ts`; species stats live in the catalog.
 
 `playerMaxHealth`, damage, and attack cooldowns are validated before boot. Health appears only when the active population contains enemies.
 
 ## Performance and lifecycle
 
-AI decisions run at `decisionHz`; movement stays in the fixed simulation step. Creatures beyond `sleepDistance` stop updating until the player returns. The delivered limits allow at most 16 active creatures, six enemies, and 20 creature draw calls.
+AI decisions run at `decisionHz`; movement stays in the fixed simulation step. Creatures beyond `sleepDistance` stop updating until the player returns. The delivered limits allow at most 16 active creatures, six enemies, and 24 creature draw calls (an Iron Golem uses five).
 
 Spawn planning is deterministic for `world.seed`. Creatures avoid water, steep steps, solid body cells, the immediate spawn clearing, and non-grass surfaces. Pause freezes simulation and rendering. Restart regenerates the initial population without recreating materials or meshes; ordinary respawn preserves the current population unless the world itself is regenerated.

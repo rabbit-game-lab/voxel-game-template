@@ -1,4 +1,4 @@
-import { CREATURE_CATALOG } from '../creatures/catalog'
+import { CREATURE_CATALOG, creatureDrawCalls } from '../creatures/catalog'
 import type { CreatureBehaviorKey } from '../creatures/config'
 import type { WorldZone } from '../content/config'
 import type { GameConfig } from '../game.config'
@@ -6,7 +6,7 @@ import type { GameConfig } from '../game.config'
 const ZONES: readonly WorldZone[] = ['spawn-meadow', 'forest', 'shore', 'highland', 'coast']
 const BEHAVIORS: readonly CreatureBehaviorKey[] = [
   'grazer', 'wanderer', 'skittish', 'companion', 'territorial',
-  'chaser-melee', 'stationary', 'npc-wander',
+  'chaser-melee', 'stationary', 'npc-wander', 'guardian',
 ]
 
 export function validateCreaturesConfig(config: GameConfig): string[] {
@@ -40,7 +40,7 @@ export function validateCreaturesConfig(config: GameConfig): string[] {
     errors.push('creatures.simulation.sleepDistance must be between 8 and camera far clipping')
   }
   for (const [presetKey, preset] of Object.entries(creatures.presets)) {
-    let total = 0; let enemies = 0
+    let total = 0; let enemies = 0; let drawCalls = 0
     const ids = new Set<string>()
     for (const [index, group] of preset.groups.entries()) {
       const path = `creatures.presets.${presetKey}.groups[${index}]`
@@ -53,10 +53,12 @@ export function validateCreaturesConfig(config: GameConfig): string[] {
       if (!Number.isFinite(group.roamRadius) || group.roamRadius < 1 || group.roamRadius > 24) errors.push(`${path}.roamRadius must be in [1, 24]`)
       if (ids.has(group.species)) errors.push(`${path}.species is duplicated; combine it into one group`)
       ids.add(group.species); total += group.count
+      if (group.species in CREATURE_CATALOG) drawCalls += group.count * creatureDrawCalls(group.species)
       if (CREATURE_CATALOG[group.species]?.category === 'enemy') enemies += group.count
     }
     if (total > creatures.limits.maxCreatures) errors.push(`creature preset ${presetKey} exceeds maxCreatures`)
     if (enemies > creatures.limits.maxEnemies) errors.push(`creature preset ${presetKey} exceeds maxEnemies`)
+    if (drawCalls > creatures.limits.maxDrawCalls) errors.push(`creature preset ${presetKey} exceeds maxDrawCalls`)
   }
   return errors
 }

@@ -220,6 +220,7 @@ export const CONFIG = {
           { species: 'pig', count: 1, zones: ['forest'], scale: 1, minSpacing: 3, roamRadius: 6 },
           { species: 'dog', count: 1, zones: ['spawn-meadow'], scale: 1, minSpacing: 3, roamRadius: 10 },
           { species: 'raccoon', count: 1, zones: ['forest'], scale: 1, minSpacing: 3, roamRadius: 7 },
+          { species: 'ironGolem', count: 1, zones: ['spawn-meadow'], scale: 1, minSpacing: 3, roamRadius: 8 },
         ],
       },
       forestAdventure: {
@@ -235,6 +236,7 @@ export const CONFIG = {
           { species: 'skeleton', count: 1, zones: ['highland'], scale: 1, minSpacing: 5, roamRadius: 9 },
           { species: 'goblin', count: 1, zones: ['forest'], scale: 1, minSpacing: 5, roamRadius: 9 },
           { species: 'zombie', count: 1, zones: ['coast', 'forest'], scale: 1, minSpacing: 5, roamRadius: 8 },
+          { species: 'ironGolem', count: 1, zones: ['spawn-meadow'], scale: 1, minSpacing: 3, roamRadius: 8 },
         ],
       },
     },
@@ -243,7 +245,7 @@ export const CONFIG = {
       playerAttackDamage: 1, playerAttackCooldown: 0.32, enemyAttackCooldown: 1.1,
     },
     simulation: { decisionHz: 10, sleepDistance: 30 },
-    limits: { maxCreatures: 16, maxEnemies: 6, maxDrawCalls: 20 },
+    limits: { maxCreatures: 16, maxEnemies: 6, maxDrawCalls: 24 },
   },
   visual: {
     topTint: 1, sideTint: 0.88, darkSideTint: 0.8, bottomTint: 0.65,

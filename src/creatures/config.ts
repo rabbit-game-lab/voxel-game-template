@@ -3,12 +3,12 @@ import type { WorldZone } from '../content/config'
 export type CreatureSpeciesKey =
   | 'horse' | 'chicken' | 'sheep' | 'pig' | 'dog' | 'raccoon' | 'wolf'
   | 'slime' | 'skeleton' | 'goblin' | 'zombie'
-  | 'explorer' | 'villager'
+  | 'explorer' | 'villager' | 'ironGolem'
 
 export type CreatureCategory = 'animal' | 'enemy' | 'character'
 export type CreatureBehaviorKey =
   | 'grazer' | 'wanderer' | 'skittish' | 'companion' | 'territorial'
-  | 'chaser-melee' | 'stationary' | 'npc-wander'
+  | 'chaser-melee' | 'stationary' | 'npc-wander' | 'guardian'
 export type CreaturePresetKey = 'empty' | 'peacefulForest' | 'forestAdventure'
 
 export interface CreatureGroupConfig {

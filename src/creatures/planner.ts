@@ -57,6 +57,13 @@ function candidates(world: VoxelWorld, config: GameConfig): Candidate[] {
   return result
 }
 
+function bodyClear(world: VoxelWorld, cell: Candidate, height: number): boolean {
+  for (let y = cell.y; y < cell.y + height; y += 1) {
+    if (blockById(world.getBlock(Math.floor(cell.x), y, Math.floor(cell.z))).solid) return false
+  }
+  return true
+}
+
 export function planCreatures(world: VoxelWorld, config: GameConfig): CreatureSpawn[] {
   const random = randomFactory(config.world.seed + 48121)
   const available = candidates(world, config)
@@ -69,6 +76,7 @@ export function planCreatures(world: VoxelWorld, config: GameConfig): CreatureSp
     for (const cell of available) {
       if (!group.zones.includes(cell.zone)) continue
       if (result.some((other) => Math.hypot(other.x - cell.x, other.z - cell.z) < group.minSpacing)) continue
+      if (!bodyClear(world, cell, spec.height * group.scale)) continue
       result.push({
         id: `${group.species}-${placed}`, species: group.species, category: spec.category,
         behavior: group.behavior ?? spec.behavior, x: cell.x, y: cell.y, z: cell.z,

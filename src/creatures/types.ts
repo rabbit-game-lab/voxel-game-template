@@ -23,6 +23,8 @@ export interface CreatureState extends CreatureSpawn {
   active: boolean
   moving: boolean
   phase: number
+  /** Seconds left in the current melee swing; renderers use it for attack poses. */
+  swing: number
 }
 
 export interface CreatureHit {

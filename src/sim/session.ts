@@ -15,6 +15,7 @@ import { raycastVoxels } from '../voxel/raycast'
 import { VoxelWorld } from '../voxel/world'
 import { CollectibleStore, DiscoveryStore } from './exploration'
 import { CreatureSimulation } from './creatures'
+import { creatureEventOutcome } from './creature-events'
 import { creatureSpec } from '../creatures/catalog'
 import { MissionController } from './mission'
 import { collidesAt, createPlayer, playerIntersectsVoxel, stepPlayer } from './player'
@@ -124,6 +125,10 @@ export class GameSession {
         else this.respawn()
         return
       }
+    }
+    for (const outcome of this.creatures.consumeEvents().map(creatureEventOutcome)) {
+      this.events.push(...outcome.events)
+      if (outcome.notice) this.setNotice(outcome.notice, 'combat', outcome.seconds)
     }
     this.collectNearby(); this.discoverNearby(); this.evaluateMission()
   }
