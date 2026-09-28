@@ -1,5 +1,5 @@
-import type { PauseHandle } from '../rabbit/pause'
-import { runtime } from '../rabbit/runtime'
+import type { PauseHandle } from '@rabbit-game-lab/sdk/common/pause'
+import { runtime } from '@rabbit-game-lab/sdk/common/runtime'
 import type { GamePhase, InputDevice } from '../sim/types'
 import type { InputHandle } from './input'
 

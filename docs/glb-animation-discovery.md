@@ -5,7 +5,7 @@ animation count, skeleton requirement, or platform registry is necessary.
 
 ## Discovery before and during play
 
-After `rabbit-kit sync-check`, **every `npm run check` automatically inventories
+With the installed SDK package, **every `npm run check` automatically inventories
 the GLBs under `public/`**, including models not yet added to the asset manifest.
 It prints clip indices, authored names, durations and skin counts. Invalid files
 produce inspection warnings, distinct from a valid model with zero clips. This
@@ -14,8 +14,8 @@ inventory is advisory; it is not a full glTF validator or a playback test.
 For structured output in a template, without a kit checkout or dependencies:
 
 ```sh
-node scripts/models.mjs --json
-node scripts/models.mjs public/assets/models/hero.glb --json
+npx --no-install rabbit-kit inspect-model --json
+npx --no-install rabbit-kit inspect-model public/assets/models/hero.glb --json
 ```
 
 The kit also exposes `rabbit-kit inspect-model [file.glb|directory] --json`.
@@ -118,9 +118,7 @@ clip references now reject loading instead of silently warning. Semantic handles
 accept custom state strings; `state()` consequently returns `string`.
 
 Release this behavior with the kit's coordinated SDK API migration policy.
-Sync **both SDK and checker from the same reviewed commit** into a template;
-commit the generated provenance receipt with the vendored files. No published
-template or existing Studio project changes until its normal update workflow.
+Install a reviewed exact `@rabbit-game-lab/sdk` version and commit both package manifests. SDK and checker ship together; see [npm upgrades](npm-sdk.md). Existing Studio projects retain their pinned template version.
 
 Run `npm test` in the kit, then template `npm ci`, `npm run check`, `npm run build`
 and the iframe harness. `node harness/features.mjs --screenshot <directory>`

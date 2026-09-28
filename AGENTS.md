@@ -26,19 +26,6 @@ src/
   game.config.ts          ⭐ Public gameplay tuning (see docs/game-config.md).
   camera/config.ts        Typed camera/avatar contract; defaults live in game.config.
   environment/config.ts   Typed environment contract; public tuning via CONFIG.environment.
-  rabbit/                 Platform SDK, vendored from rabbit-game-kit. DO NOT EDIT.
-    sdk.ts                Handshake, resize, safe storage (unused here), audio unlock.
-    keyboard.ts           Declarative key→action input (createKeyboard).
-    touch.ts              On-screen joystick + buttons (createTouch).
-    gamepad.ts            Pad buttons/axes → the same actions (createGamepad).
-    sound.ts              Music/SFX groups and procedural tones (createSound).
-    pause.ts              Shared Studio/local pause state + overlay.
-    assets.ts             GLB/texture/audio manifest helpers (createAssets).
-    character.ts          Imported GLB actors (spawnCharacter / spawnObject).
-    physics.ts            Kinematic helpers (unused for voxel AABB movement).
-    controller.ts         Generic character controller (unused).
-    players.ts / viewport.ts  Local multiplayer seats (unused in this template).
-    spatial.ts            Profile spatial-v1 adapter (Studio sandbox).
   data/
     blocks.ts             Stable block IDs and face tiles. Never reorder or reuse IDs.
     assets.ts             Boot-critical atlas + conditional Quaternius hero GLB.
@@ -74,8 +61,6 @@ src/
     hud.ts                Single DOM HUD tree; touch-safe layout.
     audio.ts              Procedural SFX palette over createSound.
     config-validator.ts   Runtime validation for CONFIG invariants.
-scripts/check.mjs         Local rabbit-check. DO NOT EDIT (sync-check from kit).
-scripts/profile.mjs       Profile v1 resolver. DO NOT EDIT (sync-check from kit).
 docs/game-config.md       Units, safe ranges, and config interactions.
 public/assets/            PNG atlas and optional models actually loaded by the game.
 ```
@@ -129,7 +114,7 @@ and `src/systems/`.
 14. **Art** → `public/assets/` + `src/data/assets.ts`; Quaternius provenance in `THIRD_PARTY.md`.
 
 **Before writing a system for X, check whether an SDK module already does it.**
-They live in `src/rabbit/`, are never edited, and each file's header lists the
+They live in `node_modules/@rabbit-game-lab/sdk/`, are never edited, and each file's header lists the
 requests it solves:
 
 | Module | Use it for |
@@ -150,9 +135,8 @@ the browser and parent iframe still decide whether a request is granted.
 
 ## Rules
 
-- **DO NOT EDIT**: `src/main.ts`, anything in `src/rabbit/` (repair with
-  `node ../../tooling/rabbit-game-kit/bin/rabbit-kit.mjs sync-sdk`), `rabbit.json`,
-  `scripts/check.mjs`, `scripts/profile.mjs`, `vite.config.ts`, `package.json`
+- **DO NOT EDIT**: `src/main.ts`, anything in `node_modules/@rabbit-game-lab/sdk/` (upgrade through npm), `rabbit.json`,
+  `rabbit-check`, `vite.config.ts`, `package.json`
   dependencies unless the platform contract itself changes.
 - Keep `rabbit.json` at `audio: true`, `pointerLock: true`, `storage: false`.
 - **Run `npm run check` after every change.** Fix console errors forwarded from the iframe.
@@ -234,11 +218,11 @@ hero.play('run')
 4. **New win condition or mode**: extend `sim/session.ts` phases and HUD in `systems/hud.ts`; keep sim free of PlayCanvas imports.
 5. **New creature**: register its stable key, aliases, bounds and defaults in `creatures/catalog.ts`, reuse/add a procedural archetype, then expose it only through `CONFIG.creatures`.
 6. **Performance**: respect `CONFIG.performance.maxChunkRebuildsPerFrame`; pool fragments and reuse chunk entities.
-7. **Kit updates**: after pulling kit changes, run `sync-sdk` and `sync-check` from `rabbit-game-kit`; never patch vendored files by hand.
+7. **Kit updates**: install a reviewed exact `@rabbit-game-lab/sdk` version and commit both package manifests; never edit installed modules.
 
 ## SDK 1.0 integration
 
-Read [docs/rabbit-sdk.md](docs/rabbit-sdk.md) for shared lifecycle, required/optional assets, pointer lock and character switching. `.rabbit-kit.json` records the exact source commit and file hashes. Run `rabbit-kit status --check` from a matching kit checkout; `npm run check` also checks the recorded integrity. Do not edit vendored files or their receipt.
+Read [docs/rabbit-sdk.md](docs/rabbit-sdk.md) for shared lifecycle, required/optional assets, pointer lock and character switching. The exact `@rabbit-game-lab/sdk` version and SHA-512 tarball integrity are pinned in `package-lock.json`. Run `npx --no-install rabbit-kit status --check`; `npm run check` also validates the installed package. Upgrade through npm; never edit installed SDK files.
 
 ## Switching the playable character
 
@@ -246,8 +230,16 @@ For a GLB actor, keep the `CharacterHandle` returned by `spawnCharacter(assets, 
 
 ## Automatic GLB discovery (kit 1.0.0)
 
-`npm run check` inventories every GLB under `public/`, including clip names, indices, durations and skin counts. Use `node scripts/models.mjs <file-or-directory> --json` for structured inspection, including models stored outside `public/`. After loading, `assets.modelInfo(key)` separates available clips from enabled playback keys.
+`npm run check` inventories every GLB under `public/`, including clip names, indices, durations and skin counts. Use `npx --no-install rabbit-kit inspect-model <file-or-directory> --json` for structured inspection, including models stored outside `public/`. After loading, `assets.modelInfo(key)` separates available clips from enabled playback keys.
 
 Omit `animations` and `clips` for automatic discovery: `spawnCharacter(assets, key)` binds unambiguous semantic states. Use the model's `animationMap` only for exceptions (authored name, zero-based index, or `null` to disable a state). Check `hero.animations()` for ambiguous or unused clips; gameplay still calls `hero.play(state)`. A skeleton is not required for animation. `spawnObject` or `animate: false` keeps props static. Legacy explicit `clips` lists remain optional; only those lists opt into first-clip resting when idle is missing.
 
-Read [the GLB discovery and migration guide](docs/glb-animation-discovery.md). Sync SDK and checker together from kit tag `v1.0.0` (`8bca4a8135dcd2a7b66b51f547cceba7755fdcd3`) and commit the generated `.rabbit-kit.json`; never edit vendored files or the receipt by hand.
+Read [the GLB discovery and migration guide](docs/glb-animation-discovery.md). Upgrade the SDK and checker together with `npm install --save-exact @rabbit-game-lab/sdk@<version>` and commit both package manifests. See [npm installation and upgrades](npm-sdk.md).
+
+## SDK installation and upgrades
+
+The SDK and checker are pinned to `@rabbit-game-lab/sdk@1.0.0`. Read
+[docs/npm-sdk.md](docs/npm-sdk.md) for private npm access, package import paths,
+upgrades, and platform rollout prerequisites. API guides and readable sources
+are installed under `node_modules/@rabbit-game-lab/sdk/docs` and `sdk/`;
+use the public package exports in game code and never edit installed files.

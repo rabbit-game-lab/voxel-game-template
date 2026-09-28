@@ -1,5 +1,5 @@
 import * as pc from 'playcanvas'
-import type { AssetsHandle } from '../rabbit/assets'
+import type { AssetsHandle } from '@rabbit-game-lab/sdk/playcanvas-3d/assets'
 import type { TimeOfDay } from '../environment/config'
 import { color, makeMat } from './helpers'
 import type { GameConfig } from '../game.config'

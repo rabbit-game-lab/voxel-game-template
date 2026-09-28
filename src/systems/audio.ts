@@ -1,5 +1,5 @@
 import type { GameConfig } from '../game.config'
-import { createSound } from '../rabbit/sound'
+import { createSound } from '@rabbit-game-lab/sdk/common/sound'
 import type { SoundType } from '../sim/types'
 
 export interface AudioHandle {

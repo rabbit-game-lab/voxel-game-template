@@ -13,6 +13,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          registry-url: 'https://registry.npmjs.org'
       - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: npm run check
       - run: npm run build

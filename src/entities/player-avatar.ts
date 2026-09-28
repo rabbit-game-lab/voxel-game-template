@@ -1,7 +1,7 @@
 import * as pc from 'playcanvas'
 import type { CameraMode } from '../camera/config'
 import type { GameConfig } from '../game.config'
-import type { AssetsHandle } from '../rabbit/assets'
+import type { AssetsHandle } from '@rabbit-game-lab/sdk/playcanvas-3d/assets'
 import type { PlayerState } from '../sim/types'
 import type { VoxelCoord } from '../voxel/coords'
 import { raycastVoxels } from '../voxel/raycast'

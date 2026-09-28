@@ -45,7 +45,7 @@ Con mouse, entrar pide pointer lock para giros ilimitados. Escape suelta el curs
 - `src/sim/`: jugador cinemático y reglas sin dependencias de PlayCanvas.
 - `src/entities/`: escena, cámaras, avatares, mallas de chunks y contenido combinado, ambiente, selección y efectos.
 - `src/systems/`: composición, input normalizado, HUD, audio y lifecycle Rabbit.
-- `src/rabbit/`: contrato de plataforma protegido.
+- `node_modules/@rabbit-game-lab/sdk/`: contrato de plataforma protegido.
 
 El mundo mide 64×32×64 y contiene 32 chunks de 16³. Se generan todos antes de `ready`; las ediciones reconstruyen como máximo dos chunks por frame y también invalidan el vecino cuando tocan un borde. El agua usa una capa transparente compartida: no tiene física de fluidos, no bloquea el DDA y se restaura de forma determinista cuando se rompe un bloque colocado dentro del lago.
 
@@ -64,3 +64,7 @@ Una extensión futura con props del pack debe seguir este flujo: seleccionar só
 ## Alcance deliberado
 
 No hay mundo infinito, streaming, greedy meshing, crafting, combate a distancia, monturas, domesticación, crianza, natación, simulación de fluidos, iluminación voxel, backend, guardado ni multiplayer. Caer produce respawn sin perder el sandbox; restart y recarga vuelven a generar la seed `1337`. Greedy meshing se evaluará únicamente si mediciones en dispositivos objetivo demuestran que el face-culling actual no alcanza.
+
+## Rabbit SDK package
+
+The template pins private `@rabbit-game-lab/sdk@1.0.0`. Authenticate with an npm account that can read the package before `npm ci`. See [installation and upgrades](docs/npm-sdk.md) for exact version updates, package imports and CI/platform prerequisites.
