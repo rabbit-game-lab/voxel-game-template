@@ -16,7 +16,7 @@ export function integrityFailures(root, stack) {
       failures.push(`missing ${group} provenance; sync from a Git kit checkout`)
       continue
     }
-    const prefix = group === 'sdk' ? /^src\/rabbit\/[\w.-]+\.ts$/ : /^scripts\/(check|profile|integrity)\.mjs$/
+    const prefix = group === 'sdk' ? /^src\/rabbit\/[\w.-]+\.ts$/ : /^scripts\/(check|profile|integrity|models)\.mjs$/
     for (const [path, hash] of Object.entries(entry.files)) {
       if (!prefix.test(path) || !/^[a-f0-9]{64}$/.test(hash)) { failures.push(`invalid ${group} provenance entry`); continue }
       if (!existsSync(join(root, path)) || digest(readFileSync(join(root, path), 'utf8')) !== hash) failures.push(`${path}: differs from recorded kit`)

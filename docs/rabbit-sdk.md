@@ -1,4 +1,4 @@
-# Runtime, assets and character replacement (0.8.0)
+# Runtime, assets and character replacement (1.0.0)
 
 The SDK remains vendored per stack. Sync both groups from the same reviewed kit
 commit, then run `rabbit-kit status --check --json`, the template checker, build
@@ -71,25 +71,32 @@ without installing another message listener.
 ```ts
 const pointer = createPointerLock(canvas, { onChange: updateCursorHint })
 canvas.addEventListener('pointerdown', () => { void pointer.request() })
-// Use pointer.locked() for relative movement; retain drag/touch while unlocked.
+// Use pointer.locked() / document.pointerLockElement for relative mouse look.
+// Do not add hover-look or drag-look while unlocked. Touch can keep its own path.
 // On application teardown: pointer.destroy()
 ```
 
 Request directly in a user gesture. `request()` resolves true only after the
 browser reports the lock; unsupported, denied, timed-out and paused requests
-resolve false. Escape, blur and shared pause release the lock. Recapture needs
-another gesture. Declare `embed.pointerLock: true` in authored manifests and
-delegate `allow-pointer-lock` in the host iframe. The adapter cannot grant a
-permission withheld by the embedding page.
+resolve false. Escape is the browser unlock (`exitPointerLock`). Window blur
+does not release capture. Host pause and `destroy()` do. Recapture needs
+another click. Declare `embed.pointerLock: true` in authored manifests. The
+host iframe must send `sandbox="allow-scripts allow-pointer-lock"` (no
+`allow-same-origin`) and `allow="autoplay; pointer-lock; fullscreen; gamepad"`.
+The adapter cannot grant a permission withheld by the embedding page.
 
 ## PlayCanvas character switching
+
+GLB clips are now discovered automatically when animation configuration is
+omitted. Read [automatic animation discovery](glb-animation-discovery.md) for
+available/enabled inventories, per-model semantic maps and migration notes.
 
 ```ts
 const hero = spawnCharacter(assets, 'hero', { scale: 1 })
 hero.play('run')
 await hero.switchCharacter('anotherLoadedModel')
 await hero.switchCharacter({
-  key: 'visitor', path: 'https://assets.example.org/visitor.glb', animations: 'auto',
+  key: 'visitor', path: 'https://assets.example.org/visitor.glb',
 }, { scale: 0.8, rotation: [0, 180, 0] })
 ```
 

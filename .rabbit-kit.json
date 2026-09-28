@@ -3,8 +3,8 @@
   "stack": "playcanvas-3d",
   "sdk": {
     "source": {
-      "version": "0.8.0",
-      "commit": "a106792593f0a3670d8cacd460b0ccbff91ed918",
+      "version": "1.0.0",
+      "commit": "8bca4a8135dcd2a7b66b51f547cceba7755fdcd3",
       "dirty": false
     },
     "files": {
@@ -19,8 +19,9 @@
       "src/rabbit/sound.ts": "6f340fd1edb69edad819fe3b57cf593699cfebfbbeaf0384fb93f936436cb7d3",
       "src/rabbit/spatial.ts": "0f9207852491cf70e1ab655194b3b953e5539a0fd331d6255b8d1d4d7a16f8bd",
       "src/rabbit/touch.ts": "c6c9949f38c39ffc0f62df0184d6def66636efdc778127a3dff3a791266c5731",
-      "src/rabbit/assets.ts": "457937e2134d5f430e9de5b4632ec443938cfd6f1cd06e037c358fd71f6ea99c",
-      "src/rabbit/character.ts": "373846c45e9e955609e8980a1f3c6f5db61ad01d9d114702b0424f423778619e",
+      "src/rabbit/animation-clips.ts": "6392dd5ac1021a5c9e2a5f9c6eac113e883eba02774dd78c498ae347ec40aed6",
+      "src/rabbit/assets.ts": "d508ab726e1dd2a07d9168d73818c6a8a1eef5543d76f1dfe73e0e04d4237a96",
+      "src/rabbit/character.ts": "cdf3c7d05da357894d62e525179452d70f4eeb089ef8c642f38872db49f3cd5a",
       "src/rabbit/controller.ts": "1a747467553201e3d73f8a748119c983d846f6d3104610d317ebfd7c5ccc5d4d",
       "src/rabbit/physics.ts": "498fab18de0dd9bb263cdf49624db086cadbe2f2af899232ba350c9b707bd6dc",
       "src/rabbit/viewport.ts": "23decd550feeea67adbdb1715189911f2a31aa07974c57a2c575e94786f7a02b"
@@ -28,14 +29,15 @@
   },
   "check": {
     "source": {
-      "version": "0.8.0",
-      "commit": "a106792593f0a3670d8cacd460b0ccbff91ed918",
+      "version": "1.0.0",
+      "commit": "8bca4a8135dcd2a7b66b51f547cceba7755fdcd3",
       "dirty": false
     },
     "files": {
-      "scripts/check.mjs": "e1830d125b64d631ab6353593f5397af957166fc0d8d49d21c418c0557cc07c9",
-      "scripts/profile.mjs": "68bb1d633b8fe40042e0705a581c99042513bb5627fe438a58fe70542885efcd",
-      "scripts/integrity.mjs": "3e9b2595c6482a0e3352135c2ff4edc0f682b5a99769cbde6771e634ddcd0e0c"
+      "scripts/check.mjs": "372fb8a36038ca48f0118affcdc2e7e07f6b994eeb2da02c1c3b6afbf94eae17",
+      "scripts/profile.mjs": "74d14f1122826162260f7d02ff3c804b6545d8fbebcfc8aed6997fd9d1e2fb8f",
+      "scripts/integrity.mjs": "78e6db3771f8a26f3c89d84841d93d6a2b81e4d6637ee68711dd5de91e2f21a5",
+      "scripts/models.mjs": "65ad7171a434df39fa655b287dc4d0bb5b56e74227e2b6c65ddc41c914208c7f"
     }
   }
 }
