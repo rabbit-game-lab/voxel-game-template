@@ -17,6 +17,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { profileFailures } from './profile.mjs'
 import { integrityFailures } from './integrity.mjs'
+import { inspectModels, formatModels } from './models.mjs'
 
 const root = process.cwd()
 const failures = []
@@ -212,6 +213,11 @@ function walkAll(dir, files = []) {
 
 const publicDir = join(root, 'public')
 if (existsSync(publicDir)) {
+  // Always expose the actual clips to agents, even when tsc fails. This is an
+  // inventory, not a requirement that every character or prop must animate.
+  const inventory = inspectModels(publicDir, root)
+  if (inventory.models.length) console.log(formatModels({ ...inventory, errors: [] }))
+  for (const error of inventory.errors) warnings.push(`GLB ${error.path}: inspection failed — ${error.error}`)
   let total = 0
   for (const file of walkAll(publicDir)) {
     const { size } = statSync(file)

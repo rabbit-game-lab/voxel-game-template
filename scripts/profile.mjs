@@ -287,11 +287,15 @@ function validateAssetBinding(root, binding, index, failures) {
   }
   const actual = Object.keys(binding)
   const required = ['bindingId', 'assetKind', 'registry', 'consumer']
+  const optional = ['description']
   for (const key of required) if (!actual.includes(key)) failures.push(`${label} is missing "${key}"`)
-  for (const key of actual) if (!required.includes(key)) failures.push(`${label} has unknown property "${key}"`)
+  for (const key of actual) if (!required.includes(key) && !optional.includes(key)) failures.push(`${label} has unknown property "${key}"`)
 
   if (typeof binding.bindingId !== 'string' || !BINDING_ID.test(binding.bindingId)) {
     failures.push(`${label}.bindingId must be an identifier-like string`)
+  }
+  if (binding.description !== undefined && (typeof binding.description !== 'string' || binding.description.trim().length === 0 || binding.description.length > 500)) {
+    failures.push(`${label}.description must be a non-empty string of at most 500 characters`)
   }
   if (binding.assetKind !== 'model') failures.push(`${label}.assetKind must be "model"`)
 
