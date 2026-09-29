@@ -1,6 +1,6 @@
 /** Rabbit boot and iframe lifecycle. Keep game behavior in systems/loop.ts. */
 import * as pc from 'playcanvas'
-import * as sdk from './rabbit/sdk'
+import * as sdk from '@rabbit-game-lab/sdk'
 import { setupGame } from './systems/loop'
 
 sdk.init()

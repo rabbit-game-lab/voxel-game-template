@@ -10,11 +10,13 @@
   "scripts": {
     "dev": "vite --host",
     "build": "tsc && vite build",
-    "check": "npm run test:focus && node scripts/check.mjs",
+    "check": "rabbit-check",
     "test:focus": "node --import ./scripts/register-tests.mjs --experimental-strip-types scripts/test-play-focus.mjs && node --import ./scripts/register-tests.mjs --experimental-strip-types scripts/test-pointer-lock.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "precheck": "npm run test:focus"
   },
   "dependencies": {
+    "@rabbit-game-lab/sdk": "1.0.0",
     "playcanvas": "^2.20.6"
   },
   "devDependencies": {

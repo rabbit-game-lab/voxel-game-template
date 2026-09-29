@@ -1,5 +1,5 @@
 /** Game-facing boolean adapter over the canonical Rabbit pointer-lock lifecycle. */
-import { createPointerLock as createSdkPointerLock } from '../rabbit/pointer-lock'
+import { createPointerLock as createSdkPointerLock } from '@rabbit-game-lab/sdk/common/pointer-lock'
 export interface PointerLockHandle {
   locked(): boolean
   allowed(): boolean

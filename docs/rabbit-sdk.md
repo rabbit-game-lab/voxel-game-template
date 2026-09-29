@@ -1,12 +1,6 @@
 # Runtime, assets and character replacement (1.0.0)
 
-The SDK remains vendored per stack. Sync both groups from the same reviewed kit
-commit, then run `rabbit-kit status --check --json`, the template checker, build
-and iframe verification. `.rabbit-kit.json` records the version, Git commit,
-whether that source was dirty, and normalized SHA-256 hashes for each group.
-The local checker rejects drift against this receipt; strict CLI status also
-compares against the kit checkout. A receipt is provenance, not a signature or
-a replacement for reviewing and trusting the source commit.
+This template installs the private `@rabbit-game-lab/sdk@1.0.0` package. The exact version and SHA-512 tarball integrity are pinned in `package-lock.json`; SDK and checker upgrade together. Read [installation, upgrades and rollout prerequisites](npm-sdk.md). Never edit installed modules.
 
 ## Shared lifecycle
 

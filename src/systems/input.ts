@@ -1,8 +1,8 @@
 import type { GameConfig } from '../game.config'
-import { createGamepad } from '../rabbit/gamepad'
-import { createKeyboard } from '../rabbit/keyboard'
+import { createGamepad } from '@rabbit-game-lab/sdk/common/gamepad'
+import { createKeyboard } from '@rabbit-game-lab/sdk/common/keyboard'
 import { createPointerLock } from './pointer-lock'
-import { createTouch } from '../rabbit/touch'
+import { createTouch } from '@rabbit-game-lab/sdk/common/touch'
 import type { InputDevice, InputSnapshot } from '../sim/types'
 
 type Action = 'forward' | 'back' | 'left' | 'right' | 'jump' | 'sprint' |

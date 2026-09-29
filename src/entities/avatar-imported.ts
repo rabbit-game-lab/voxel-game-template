@@ -1,7 +1,7 @@
 import type * as pc from 'playcanvas'
 import type { GameConfig } from '../game.config'
-import type { AssetsHandle } from '../rabbit/assets'
-import { spawnCharacter } from '../rabbit/character'
+import type { AssetsHandle } from '@rabbit-game-lab/sdk/playcanvas-3d/assets'
+import { spawnCharacter } from '@rabbit-game-lab/sdk/playcanvas-3d/character'
 import type { AvatarMotion, AvatarVisual } from './avatar-types'
 
 const REQUIRED_CLIPS = ['Idle', 'Walk', 'Run', 'Jump', 'Jump_Idle', 'Jump_Land'] as const

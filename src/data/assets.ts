@@ -1,4 +1,4 @@
-import { defineAssets } from '../rabbit/assets'
+import { defineAssets } from '@rabbit-game-lab/sdk/playcanvas-3d/assets'
 import type { AvatarRenderer } from '../camera/config'
 import { CONFIG } from '../game.config'
 

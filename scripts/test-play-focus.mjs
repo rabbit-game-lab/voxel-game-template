@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { mock } from 'node:test'
 import { createPlayFocus } from '../src/systems/play-focus.ts'
-import { createPause } from '../src/rabbit/pause.ts'
+import { createPause } from '@rabbit-game-lab/sdk/common/pause'
 
 globalThis.window = new EventTarget()
 globalThis.document = { createElement: () => ({ remove() {} }) }
