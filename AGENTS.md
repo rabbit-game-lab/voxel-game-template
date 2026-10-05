@@ -6,6 +6,8 @@ optionally run beacon or collection missions. Built with **PlayCanvas
 (engine-only) + Vite + TypeScript**. Terrain, water, clouds, content, and the
 default avatar are procedural; an optional Quaternius GLB loads when selected.
 
+**Rabbit SDK reference:** read [`docs/sdk-reference/README.md`](docs/sdk-reference/README.md) before writing input, touch, audio, pause, asset, character, physics or camera code. It is generated from the pinned `@rabbit-game-lab/sdk` and committed, so it is readable without `node_modules`: module import paths, typical requests and public API. Never edit it; `npx rabbit-kit sync-docs` regenerates it after an SDK upgrade.
+
 ## Commands
 
 | Command | What it does |
