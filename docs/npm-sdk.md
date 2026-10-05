@@ -19,6 +19,7 @@ Upgrade or roll back by installing the desired reviewed exact version:
 
 ```sh
 npm install --save-exact @rabbit-game-lab/sdk@1.0.0
+npx rabbit-kit sync-docs   # SDK releases after 1.0.1: refresh docs/sdk-reference/
 npx --no-install rabbit-kit status --check
 ```
 
@@ -37,8 +38,9 @@ import { defineAssets } from '@rabbit-game-lab/sdk/playcanvas-3d/assets'
 
 Common modules include runtime, input, pause, sound, pointer-lock and spatial.
 Engine modules use `@rabbit-game-lab/sdk/playcanvas-3d/<module>`. Read the
-installed `docs/`, `sdk/` sources and `dist/` declarations under
-`node_modules/@rabbit-game-lab/sdk`; import only through package exports.
+committed [SDK reference](sdk-reference/README.md) (module guides, import paths
+and public API); when installed, sources and declarations are under
+`node_modules/@rabbit-game-lab/sdk`. Import only through package exports.
 `npm run check` runs the installed `rabbit-check`. Inspect GLBs with
 `npx --no-install rabbit-kit inspect-model <file-or-directory> --json`.
 
