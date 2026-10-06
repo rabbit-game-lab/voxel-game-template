@@ -67,4 +67,4 @@ No hay mundo infinito, streaming, greedy meshing, crafting, combate a distancia,
 
 ## Rabbit SDK package
 
-The template pins private `@rabbit-game-lab/sdk@1.0.0`. Authenticate with an npm account that can read the package before `npm ci`. See [installation and upgrades](docs/npm-sdk.md) for exact version updates, package imports and CI/platform prerequisites.
+The template pins private `@rabbit-game-lab/sdk@1.1.0`. Authenticate with an npm account that can read the package before `npm ci`. See [installation and upgrades](docs/npm-sdk.md) for exact version updates, package imports and CI/platform prerequisites.

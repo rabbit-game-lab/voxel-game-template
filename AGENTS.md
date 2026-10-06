@@ -240,7 +240,7 @@ Read [the GLB discovery and migration guide](docs/glb-animation-discovery.md). U
 
 ## SDK installation and upgrades
 
-The SDK and checker are pinned to `@rabbit-game-lab/sdk@1.0.0`. Read
+The SDK and checker are pinned to `@rabbit-game-lab/sdk@1.1.0`. Read
 [docs/npm-sdk.md](docs/npm-sdk.md) for private npm access, package import paths,
 upgrades, and platform rollout prerequisites. API guides and readable sources
 are installed under `node_modules/@rabbit-game-lab/sdk/docs` and `sdk/`;

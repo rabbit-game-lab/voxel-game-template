@@ -1,6 +1,6 @@
 # Rabbit SDK from npm
 
-This template pins the private package `@rabbit-game-lab/sdk@1.0.0`.
+This template pins the private package `@rabbit-game-lab/sdk@1.1.0`.
 Its runtime, TypeScript declarations, checker and model inspector share that
 version. There are no template-local copies of SDK/checker source.
 
@@ -18,8 +18,8 @@ npm run build
 Upgrade or roll back by installing the desired reviewed exact version:
 
 ```sh
-npm install --save-exact @rabbit-game-lab/sdk@1.0.0
-npx rabbit-kit sync-docs   # SDK releases after 1.0.1: refresh docs/sdk-reference/
+npm install --save-exact @rabbit-game-lab/sdk@1.1.0
+npx rabbit-kit sync-docs   # refresh docs/sdk-reference/
 npx --no-install rabbit-kit status --check
 ```
 

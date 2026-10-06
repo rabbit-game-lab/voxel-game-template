@@ -16,7 +16,7 @@
     "precheck": "npm run test:focus"
   },
   "dependencies": {
-    "@rabbit-game-lab/sdk": "1.0.0",
+    "@rabbit-game-lab/sdk": "1.1.0",
     "playcanvas": "^2.20.6"
   },
   "devDependencies": {
