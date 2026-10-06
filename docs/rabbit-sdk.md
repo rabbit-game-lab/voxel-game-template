@@ -1,6 +1,6 @@
 # Runtime, assets and character replacement (1.0.0)
 
-This template installs the private `@rabbit-game-lab/sdk@1.0.0` package. The exact version and SHA-512 tarball integrity are pinned in `package-lock.json`; SDK and checker upgrade together. Read [installation, upgrades and rollout prerequisites](npm-sdk.md). Never edit installed modules.
+This template installs the private `@rabbit-game-lab/sdk@1.1.0` package. The exact version and SHA-512 tarball integrity are pinned in `package-lock.json`; SDK and checker upgrade together. Read [installation, upgrades and rollout prerequisites](npm-sdk.md). Never edit installed modules.
 
 ## Shared lifecycle
 

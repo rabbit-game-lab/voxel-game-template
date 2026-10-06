@@ -1,8 +1,8 @@
-<!-- Generated from @rabbit-game-lab/sdk@1.0.0 by `rabbit-kit sync-docs`. Do not edit: rabbit-check compares it with the installed package. -->
+<!-- Generated from @rabbit-game-lab/sdk@1.1.0 by `rabbit-kit sync-docs`. Do not edit: rabbit-check compares it with the installed package. -->
 
 # Rabbit SDK reference — playcanvas-3d
 
-`@rabbit-game-lab/sdk@1.0.0` is installed in `node_modules`, which you may not
+`@rabbit-game-lab/sdk@1.1.0` is installed in `node_modules`, which you may not
 be able to read or search. This folder is its committed reference: read the
 module page before writing input, audio, pause, assets, physics, character or
 camera code yourself. Rebuilding what a module already does is the most
